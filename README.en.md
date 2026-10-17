@@ -25,11 +25,13 @@ Press one hotkey and a menu opens in the middle of the screen with everything on
 
 ## Download and use
 
-1. Download `QuickMenu-Portable-<version>-x64.zip` from [Releases](../../releases) and unzip it anywhere.
+1. Download one zip from [Releases](../../releases) and unzip it anywhere:
+   - `QuickMenu-Portable-<version>-x64.zip` (about 100 MB) carries its own runtime and runs on any 64-bit Windows. If unsure, take this one.
+   - `QuickMenu-Portable-<version>-x64-small.zip` (small) needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64) installed first. Without it, starting the app shows a message with a download link.
 2. Run `QuickMenu.exe`. The default hotkey is **Alt + Space**; change it in settings.
 3. When hidden it waits in the notification area; settings can start it when you sign in.
 
-Needs 64-bit Windows 11 (Windows 10 should work but is not fully tested). The portable build carries its own runtime, so .NET doesn't need to be installed. See the [user guide](docs/user-guide.md).
+Needs 64-bit Windows 11 (Windows 10 should work but is not fully tested). The large zip carries its own runtime, so .NET doesn't need to be installed. See the [user guide](docs/user-guide.md).
 
 Settings, the game library and categories live in `%LOCALAPPDATA%\QuickMenu`; delete that folder to start over.
 
@@ -40,7 +42,7 @@ Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows.
 ```powershell
 ./scripts/build.ps1                          # build and run every test
 ./scripts/build.ps1 -SkipInteractiveTests    # skip tests that need a desktop session (as CI does)
-./scripts/build.ps1 -Package                 # also make artifacts/QuickMenu-Portable-<version>-x64.zip
+./scripts/build.ps1 -Package                 # also make artifacts/QuickMenu-Portable-<version>-x64.zip and -x64-small.zip
 dotnet run --project src/QuickMenu           # run it
 ```
 

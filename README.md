@@ -25,11 +25,13 @@
 
 ## 下载与使用
 
-1. 在 [Releases](../../releases) 下载 `QuickMenu-Portable-<版本>-x64.zip`，解压到任意文件夹。
+1. 在 [Releases](../../releases) 下载一个压缩包，解压到任意文件夹：
+   - `QuickMenu-Portable-<版本>-x64.zip`（约 100 MB）：自带运行时，任何 64 位 Windows 都能直接运行。不确定选哪个就下载这个。
+   - `QuickMenu-Portable-<版本>-x64-small.zip`（小包）：需要先安装 [.NET 10 桌面运行时](https://dotnet.microsoft.com/download/dotnet/10.0)（.NET Desktop Runtime 10，x64）。没有安装时，启动会弹出提示框并给出下载链接。
 2. 运行 `QuickMenu.exe`。默认快捷键是 **Alt + 空格**，可以在设置里改。
 3. 收起菜单后，程序在任务栏右下角的托盘里待命；设置里可以开机自动启动。
 
-需要 64 位 Windows 11（Windows 10 应该也能运行，但没有完整测试过）。便携版自带运行时，不需要另外安装 .NET。详细说明见 [使用说明](docs/使用说明.md)。
+需要 64 位 Windows 11（Windows 10 应该也能运行，但没有完整测试过）。大包自带运行时，不需要另外安装 .NET。详细说明见 [使用说明](docs/使用说明.md)。
 
 设置、游戏库和分类保存在 `%LOCALAPPDATA%\QuickMenu`；删除这个文件夹即可恢复默认。
 
@@ -40,7 +42,7 @@
 ```powershell
 ./scripts/build.ps1                          # 构建并运行全部测试
 ./scripts/build.ps1 -SkipInteractiveTests    # 跳过需要桌面会话的测试（CI 用）
-./scripts/build.ps1 -Package                 # 另外生成便携版 artifacts/QuickMenu-Portable-<版本>-x64.zip
+./scripts/build.ps1 -Package                 # 另外生成便携版 artifacts/QuickMenu-Portable-<版本>-x64.zip 和 -x64-small.zip
 dotnet run --project src/QuickMenu           # 直接运行
 ```
 

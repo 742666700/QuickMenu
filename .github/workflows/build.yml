@@ -21,13 +21,21 @@ jobs:
       - name: Build, test and package
         shell: pwsh
         run: ./scripts/build.ps1 -SkipInteractiveTests -Package
+      # Two zips: QuickMenu-Portable-<version>-x64.zip carries its own runtime;
+      # QuickMenu-Portable-<version>-x64-small.zip needs the .NET 10 Desktop Runtime.
       - uses: actions/upload-artifact@v4
         with:
           name: QuickMenu-portable
-          path: artifacts/QuickMenu-Portable-*.zip
+          path: |
+            artifacts/QuickMenu-Portable-*-x64.zip
+            artifacts/QuickMenu-Portable-*-x64-small.zip
+          if-no-files-found: error
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/QuickMenu-Portable-*.zip
+          files: |
+            artifacts/QuickMenu-Portable-*-x64.zip
+            artifacts/QuickMenu-Portable-*-x64-small.zip
+          fail_on_unmatched_files: true
           generate_release_notes: true
