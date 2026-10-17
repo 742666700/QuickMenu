@@ -2,13 +2,15 @@
 
 [中文](使用说明.md)
 
-QuickMenu is a 64-bit Windows 11 desktop tool: press a hotkey and a menu opens in the middle of the screen to open desktop items and games and switch between running apps. It runs with normal user rights, and the portable build needs no separate runtime.
+QuickMenu is a 64-bit Windows 11 desktop tool: press a hotkey and a menu opens in the middle of the screen to open desktop items and games and switch between running apps. It runs with normal user rights.
 
 > **QuickMenu is open source and always free.** If you paid for it, you were scammed: ask the seller for a refund right away. Any sale of it has nothing to do with the developer, who takes no responsibility for it.
 
 ## Getting started
 
 1. Unzip the portable package and run `QuickMenu.exe`. The first run shows a short welcome.
+   - The full zip (`-x64.zip`) carries its own .NET runtime; unzip and run.
+   - The small zip (`-x64-small.zip`) needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64, or `winget install Microsoft.DotNet.DesktopRuntime.10`). Without it, starting the app shows a .NET message with a download button; run it again once the runtime is installed. Both zips have the same features.
 2. The default hotkey is **Alt + Space**: press it to open the menu, and again (or Esc) to hide it.
 3. When hidden it waits in the notification area at the right of the taskbar; its tray menu opens the menu, opens settings or exits.
 4. The menu opens in the middle of the display the mouse is on; drag the empty top area to move it.

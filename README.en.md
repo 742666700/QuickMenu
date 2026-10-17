@@ -25,13 +25,34 @@ Press one hotkey and a menu opens in the middle of the screen with everything on
 
 ## Download and use
 
-1. Download one zip from [Releases](../../releases) and unzip it anywhere:
-   - `QuickMenu-Portable-<version>-x64.zip` (about 100 MB) carries its own runtime and runs on any 64-bit Windows. If unsure, take this one.
-   - `QuickMenu-Portable-<version>-x64-small.zip` (small) needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64) installed first. Without it, starting the app shows a message with a download link.
+Each version on [Releases](../../releases) has two zips. They hold the same code, features and interface; only the .NET runtime differs:
+
+| | Full: `QuickMenu-Portable-<version>-x64.zip` | Small: `QuickMenu-Portable-<version>-x64-small.zip` |
+| --- | --- | --- |
+| Size | about 98 MB (exe about 200 MB unzipped) | about 27 MB (exe about 28 MB unzipped) |
+| .NET runtime | inside the exe; unzip and run | uses the runtime installed on the PC |
+| Install first | nothing | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64) |
+| Runtime security fixes | fixed at the version it was built with; updated with each QuickMenu release | follow the installed runtime, so Microsoft's patches apply automatically |
+
+**Which one:** take the small zip if the .NET 10 Desktop Runtime is already installed or download size matters; if unsure, take the full zip.
+
+**Check whether it's installed:** run this in PowerShell. If a line starts with `Microsoft.WindowsDesktop.App 10.`, the small zip will run:
+
+```powershell
+dotnet --list-runtimes
+```
+
+If `dotnet` is not recognised, no .NET runtime is installed. Other versions alone (.NET 8, 9 or a later 11) are not enough; the small zip needs 10.x. To install it, download ".NET Desktop Runtime 10" for x64 from the official page above, or run `winget install Microsoft.DotNet.DesktopRuntime.10`. Starting the small zip without it shows a .NET message with a download button; it never fails silently.
+
+**For AI assistants or scripts installing it for someone:** run `dotnet --list-runtimes` first. If `Microsoft.WindowsDesktop.App 10.*` is listed, download `-x64-small.zip`; otherwise download `-x64.zip` (or, with the user's consent, install the runtime with winget and then take the small zip).
+
+Steps:
+
+1. Download one of the zips and unzip it anywhere.
 2. Run `QuickMenu.exe`. The default hotkey is **Alt + Space**; change it in settings.
 3. When hidden it waits in the notification area; settings can start it when you sign in.
 
-Needs 64-bit Windows 11 (Windows 10 should work but is not fully tested). The large zip carries its own runtime, so .NET doesn't need to be installed. See the [user guide](docs/user-guide.md).
+Needs 64-bit Windows 11 (Windows 10 should work but is not fully tested). See the [user guide](docs/user-guide.md).
 
 Settings, the game library and categories live in `%LOCALAPPDATA%\QuickMenu`; delete that folder to start over.
 

@@ -25,13 +25,34 @@
 
 ## 下载与使用
 
-1. 在 [Releases](../../releases) 下载一个压缩包，解压到任意文件夹：
-   - `QuickMenu-Portable-<版本>-x64.zip`（约 100 MB）：自带运行时，任何 64 位 Windows 都能直接运行。不确定选哪个就下载这个。
-   - `QuickMenu-Portable-<版本>-x64-small.zip`（小包）：需要先安装 [.NET 10 桌面运行时](https://dotnet.microsoft.com/download/dotnet/10.0)（.NET Desktop Runtime 10，x64）。没有安装时，启动会弹出提示框并给出下载链接。
+[Releases](../../releases) 里每个版本有两个压缩包。两者代码、功能和界面完全一样，区别只在 .NET 运行时：
+
+| | 完整版 `QuickMenu-Portable-<版本>-x64.zip` | 轻量版 `QuickMenu-Portable-<版本>-x64-small.zip` |
+| --- | --- | --- |
+| 大小 | 约 98 MB（解压后 exe 约 200 MB） | 约 27 MB（解压后 exe 约 28 MB） |
+| .NET 运行时 | 打包在 exe 里，解压即用 | 使用电脑上已安装的运行时 |
+| 需要提前安装 | 不需要 | [.NET 10 桌面运行时](https://dotnet.microsoft.com/download/dotnet/10.0)（.NET Desktop Runtime 10，x64） |
+| 运行时安全更新 | 固定为打包时的版本，随快捷菜单新版本更新 | 跟随系统里安装的运行时，微软发布补丁后自动使用 |
+
+**怎么选：** 已经装了 .NET 10 桌面运行时，或者在意下载大小，就选轻量版；不确定就选完整版。
+
+**检查是否已安装：** 在 PowerShell 运行下面的命令，输出里有 `Microsoft.WindowsDesktop.App 10.` 开头的一行，就可以用轻量版：
+
+```powershell
+dotnet --list-runtimes
+```
+
+提示找不到 `dotnet` 命令，说明没有安装任何 .NET 运行时。只装了其他版本（如 .NET 8、9 或以后的 11）也不行，轻量版需要 10.x。安装运行时：到上面的官方页面下载 “.NET Desktop Runtime 10” x64 安装包，或运行 `winget install Microsoft.DotNet.DesktopRuntime.10`。如果没装就启动轻量版，会弹出 .NET 的提示框并给出下载按钮，不会无声无息地打不开。
+
+**替用户安装的 AI 助手或脚本：** 先运行 `dotnet --list-runtimes`；有 `Microsoft.WindowsDesktop.App 10.*` 就下载 `-x64-small.zip`，否则下载 `-x64.zip`（或者先经用户同意用 winget 安装运行时，再下载轻量版）。
+
+使用步骤：
+
+1. 下载其中一个压缩包，解压到任意文件夹。
 2. 运行 `QuickMenu.exe`。默认快捷键是 **Alt + 空格**，可以在设置里改。
 3. 收起菜单后，程序在任务栏右下角的托盘里待命；设置里可以开机自动启动。
 
-需要 64 位 Windows 11（Windows 10 应该也能运行，但没有完整测试过）。大包自带运行时，不需要另外安装 .NET。详细说明见 [使用说明](docs/使用说明.md)。
+需要 64 位 Windows 11（Windows 10 应该也能运行，但没有完整测试过）。详细说明见 [使用说明](docs/使用说明.md)。
 
 设置、游戏库和分类保存在 `%LOCALAPPDATA%\QuickMenu`；删除这个文件夹即可恢复默认。
 
