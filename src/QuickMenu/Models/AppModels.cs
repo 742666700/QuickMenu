@@ -32,7 +32,8 @@ public sealed record RunningApp(string Id, string Name, ImageSource? Icon, Proce
 public enum ThemeMode { System, Light, Dark, Oled, OledDay, Cream, ChatGpt, DeepSeek, Gemini }
 public sealed class AppSettings
 {
-    public uint HotkeyModifiers { get; set; } = 3;
+    /// <summary>Alt (1) by default, so Alt + Space opens the menu.</summary>
+    public uint HotkeyModifiers { get; set; } = 1;
     public uint HotkeyKey { get; set; } = 32;
     public ThemeMode Theme { get; set; } = ThemeMode.System;
     public bool StartWithWindows { get; set; }

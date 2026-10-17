@@ -1,4 +1,4 @@
-# QuickMenu
+# QuickMenu (AI娘快捷菜单)
 
 [中文](README.md)
 
@@ -26,7 +26,7 @@ Press one hotkey and a menu opens in the middle of the screen with everything on
 ## Download and use
 
 1. Download `QuickMenu-Portable-<version>-x64.zip` from [Releases](../../releases) and unzip it anywhere.
-2. Run `QuickMenu.exe`. The default hotkey is **Ctrl + Alt + Space**; change it in settings.
+2. Run `QuickMenu.exe`. The default hotkey is **Alt + Space**; change it in settings.
 3. When hidden it waits in the notification area; settings can start it when you sign in.
 
 Needs 64-bit Windows 11 (Windows 10 should work but is not fully tested). The portable build carries its own runtime, so .NET doesn't need to be installed. See the [user guide](docs/user-guide.md).

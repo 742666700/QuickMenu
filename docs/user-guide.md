@@ -9,7 +9,7 @@ QuickMenu is a 64-bit Windows 11 desktop tool: press a hotkey and a menu opens i
 ## Getting started
 
 1. Unzip the portable package and run `QuickMenu.exe`. The first run shows a short welcome.
-2. The default hotkey is **Ctrl + Alt + Space**: press it to open the menu, and again (or Esc) to hide it.
+2. The default hotkey is **Alt + Space**: press it to open the menu, and again (or Esc) to hide it.
 3. When hidden it waits in the notification area at the right of the taskbar; its tray menu opens the menu, opens settings or exits.
 4. The menu opens in the middle of the display the mouse is on; drag the empty top area to move it.
 
@@ -30,7 +30,7 @@ Shows apps with windows (minimised ones included) and the tray apps that can be 
 
 | Key | Does |
 | --- | --- |
-| Hotkey (Ctrl + Alt + Space by default) | Open / hide the menu |
+| Hotkey (Alt + Space by default) | Open / hide the menu |
 | Tab | Switch between Desktop and Running |
 | Arrow keys | Move the selection |
 | Enter | Open the item or switch to the window |

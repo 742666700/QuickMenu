@@ -301,7 +301,7 @@ internal static class Diagnostics
         Capture(window, Path.Combine(output, "settings-about.png"), 1);
         window.PreviewPage(MenuPage.Desktop);
         window.ShowWelcome();
-        checks["first-run welcome names the hotkey and offers settings"] = window.HasOverlay && window.DialogDescription.Text.Contains(MainWindow.FormatHotkey(3, 32)) == window.DialogDescription.Text.Contains("Ctrl") && (string)window.DialogConfirm.Content == "打开设置";
+        checks["first-run welcome names the hotkey and offers settings"] = window.HasOverlay && window.DialogDescription.Text.Contains(window.CurrentHotkey) && new AppSettings().HotkeyModifiers == 1 && new AppSettings().HotkeyKey == 32 && (string)window.DialogConfirm.Content == "打开设置";
         Capture(window, Path.Combine(output, "welcome.png"), 1);
         window.PreviewCategoryEditor(false);
         checks["closing the welcome restores the dialog's buttons"] = !window.HasOverlay && (string)window.DialogCancel.Content == "取消";

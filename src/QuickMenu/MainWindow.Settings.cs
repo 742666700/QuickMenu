@@ -16,6 +16,7 @@ public partial class MainWindow
     /// <summary>The project's home page and the developer's address, shown under 关于.</summary>
     internal const string ProjectUrl = "https://github.com/742666700/QuickMenu";
     internal const string ContactEmail = "742666700@163.com";
+    internal string CurrentHotkey => FormatHotkey(_settings.HotkeyModifiers, _settings.HotkeyKey);
     internal static string AppVersion => Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "";
     private static readonly IReadOnlyList<TimeZoneInfo> TimeZones = TimeZoneInfo.GetSystemTimeZones();
     private static readonly Dictionary<string, TimeZoneInfo?> ZoneCache = new(StringComparer.OrdinalIgnoreCase);

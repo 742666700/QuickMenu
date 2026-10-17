@@ -15,7 +15,7 @@ public class SettingsServiceTests
         {
             File.WriteAllText(path, "{ invalid");
             var settings = new SettingsService(path, false).Load();
-            Assert.Equal(3u, settings.HotkeyModifiers);
+            Assert.Equal(1u, settings.HotkeyModifiers);
             Assert.Equal(32u, settings.HotkeyKey);
             Assert.False(settings.StartWithWindows);
         }
