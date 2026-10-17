@@ -6,7 +6,7 @@ Press one hotkey and a menu opens in the middle of the screen with everything on
 
 > **QuickMenu is open source and always free.** If you paid for it, you were scammed: ask the seller for a refund right away. Any sale of it has nothing to do with the developer, who takes no responsibility for it.
 
-![QuickMenu with the Cream Daisy theme and Claude-chan](docs/images/menu-claude.jpg)
+![Alt + Space opens the menu while DeepSeek-chan eats her rice](docs/images/demo-deepseek.gif)
 
 ## What it does
 
@@ -17,6 +17,8 @@ Press one hotkey and a menu opens in the middle of the screen with everything on
 - **Controller**: Menu + View opens the menu, D-pad / left stick move, A confirms, B opens the right-click menu, LB / RB switch pages, LT / RT switch tabs.
 - **Themes**: OLED Day / Night, Cream Daisy, Pearl, Deep Sea and Starry Violet with light motion, and an optional character standing beside the menu.
 - **English / 中文** interface, following Windows or chosen in settings.
+
+![QuickMenu with the Cream Daisy theme and Claude-chan](docs/images/menu-claude.jpg)
 
 | | |
 | --- | --- |
