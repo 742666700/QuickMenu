@@ -1,0 +1,11 @@
+.tools/
+**/bin/
+**/obj/
+artifacts/
+*.user
+*.suo
+.claude/settings.local.json
+
+# Python caches
+__pycache__/
+*.pyc

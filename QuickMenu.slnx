@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/QuickMenu/QuickMenu.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/QuickMenu.Fixture/QuickMenu.Fixture.csproj" />
+    <Project Path="tests/QuickMenu.Tests/QuickMenu.Tests.csproj" />
+  </Folder>
+</Solution>

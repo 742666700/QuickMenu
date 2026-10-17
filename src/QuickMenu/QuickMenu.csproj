@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>QuickMenu</AssemblyName>
+    <RootNamespace>QuickMenu</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/quick-menu.ico</ApplicationIcon>
+    <Version>2.0.0</Version>
+    <Description>快捷菜单 — 桌面启动与运行应用管理</Description>
+    <Authors>QuickMenu</Authors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- This is a WPF host; its native manifest owns per-monitor DPI. WinForms is used only for NotifyIcon. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+  <ItemGroup><Content Include="Assets/quick-menu.ico"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory></Content></ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets/Fonts/QuickMenuSerifSC-SemiBold.ttf"/>
+    <!-- Optional Claude娘 art; the theme works without it. -->
+    <Resource Include="Assets/Characters/**/*.png"/>
+    <EmbeddedResource Include="Strings/*.json" LogicalName="Strings.%(Filename)%(Extension)"/>
+    <Content Include="Assets/Fonts/OFL.txt"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory></Content>
+  </ItemGroup>
+</Project>

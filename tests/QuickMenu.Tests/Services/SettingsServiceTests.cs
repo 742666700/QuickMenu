@@ -1,0 +1,147 @@
+using System.IO;
+using QuickMenu.Models;
+using QuickMenu.Services;
+using Xunit;
+
+namespace QuickMenu.Tests.Services;
+
+public class SettingsServiceTests
+{
+    [Fact]
+    public void MalformedSettingsFallBackWithoutThrowing()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "{ invalid");
+            var settings = new SettingsService(path, false).Load();
+            Assert.Equal(3u, settings.HotkeyModifiers);
+            Assert.Equal(32u, settings.HotkeyKey);
+            Assert.False(settings.StartWithWindows);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData(ThemeMode.ChatGpt)]
+    [InlineData(ThemeMode.DeepSeek)]
+    [InlineData(ThemeMode.Gemini)]
+    [InlineData(ThemeMode.Cream)]
+    [InlineData(ThemeMode.Oled)]
+    [InlineData(ThemeMode.OledDay)]
+    public void SettingsRoundTripPreservesExplicitChoices(ThemeMode theme)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "QuickMenu-test-" + Guid.NewGuid() + ".json");
+        try
+        {
+            var service = new SettingsService(path, false);
+            Assert.True(service.Save(new() { Theme = theme, HotkeyModifiers = 6, HotkeyKey = 75 }).Success);
+            var loaded = service.Load();
+            Assert.Equal(theme, loaded.Theme);
+            Assert.Equal(6u, loaded.HotkeyModifiers);
+            Assert.Equal(75u, loaded.HotkeyKey);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData(1, ThemeMode.OledDay)]
+    [InlineData(2, ThemeMode.Oled)]
+    public void RetiredLightAndDarkThemesMoveToOled(int saved, ThemeMode expected)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "{\"Theme\":" + saved + "}");
+            Assert.Equal(expected, new SettingsService(path, false).Load().Theme);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("{\"Character\":\"gemini\"}", "gemini")]
+    [InlineData("{}", "claude")]
+    [InlineData("{\"ShowCompanion\":true}", "claude")]
+    [InlineData("{\"ShowCompanion\":false}", "")]
+    [InlineData("{\"Character\":\"\"}", "")]
+    public void CharacterChoiceSurvivesTheOldOnOffSwitch(string json, string expected)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, json);
+            var service = new SettingsService(path, false);
+            var loaded = service.Load();
+            Assert.Equal(expected, loaded.Character);
+            Assert.True(service.Save(loaded).Success);
+            Assert.DoesNotContain("ShowCompanion", File.ReadAllText(path));
+            Assert.Equal(expected, service.Load().Character);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("{}", true, true)]
+    [InlineData("{\"CharacterFollowsTheme\":false,\"ShowWorldClock\":false}", false, false)]
+    public void FollowThemeAndWorldClockDefaultOnAndPersist(string json, bool follows, bool clock)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, json);
+            var service = new SettingsService(path, false);
+            var loaded = service.Load();
+            Assert.Equal(follows, loaded.CharacterFollowsTheme);
+            Assert.Equal(clock, loaded.ShowWorldClock);
+            Assert.True(service.Save(loaded).Success);
+            Assert.Equal(clock, service.Load().ShowWorldClock);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{\"HotkeyKey\":0}")]
+    [InlineData("{\"Theme\":99}")]
+    public void InvalidParsedSettingsUseSafeDefaults(string json)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, json);
+            var loaded = new SettingsService(path, false).Load();
+            Assert.Equal(ThemeMode.System, loaded.Theme);
+            Assert.Equal(32u, loaded.HotkeyKey);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void OneXSettingsKeepTheirClockAndSkipTheWelcomeWhileNewInstallsStartPlain()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "QuickMenuSettings-" + Guid.NewGuid() + ".json");
+        try
+        {
+            var fresh = new SettingsService(path, false).Load();
+            Assert.False(fresh.WelcomeShown);
+            Assert.Equal("", fresh.ClockLabel);
+            Assert.Null(fresh.SecondClockZone);
+            Assert.Equal(AppSettings.CurrentVersion, fresh.Version);
+
+            File.WriteAllText(path, """{ "HotkeyModifiers": 1, "HotkeyKey": 32, "Theme": 8, "ShowWorldClock": true }""");
+            var migrated = new SettingsService(path, false).Load();
+            Assert.True(migrated.WelcomeShown);
+            Assert.Equal("美国时间", migrated.ClockLabel);
+            Assert.Equal("China Standard Time", migrated.SecondClockZone);
+            Assert.Equal("北京时间", migrated.SecondClockLabel);
+
+            migrated.SecondClockZone = null; migrated.ClockLabel = "";
+            Assert.True(new SettingsService(path, false).Save(migrated).Success);
+            var reloaded = new SettingsService(path, false).Load();
+            Assert.Null(reloaded.SecondClockZone);
+            Assert.Equal("", reloaded.ClockLabel);
+            Assert.True(reloaded.WelcomeShown);
+        }
+        finally { File.Delete(path); }
+    }
+}

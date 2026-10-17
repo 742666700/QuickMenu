@@ -1,0 +1,55 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Light defaults. MainWindow.ApplyTheme replaces these from Services/ThemePalette.cs at runtime. -->
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#FAF9F5"/>
+  <SolidColorBrush x:Key="SidebarBrush" Color="#F0EEE6"/>
+  <SolidColorBrush x:Key="TextBrush" Color="#141413"/>
+  <SolidColorBrush x:Key="MutedBrush" Color="#6B6A64"/>
+  <SolidColorBrush x:Key="BorderBrush" Color="#E5E2D9"/>
+  <SolidColorBrush x:Key="HoverBrush" Color="#F0EEE6"/>
+  <SolidColorBrush x:Key="SelectedBrush" Color="#F5E6DD"/>
+  <SolidColorBrush x:Key="AccentBrush" Color="#C96442"/>
+  <SolidColorBrush x:Key="InputBrush" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="DangerBrush" Color="#B53333"/>
+  <SolidColorBrush x:Key="ChipBrush" Color="Transparent"/>
+  <SolidColorBrush x:Key="PopupBrush" Color="#FDFCF9"/>
+  <SolidColorBrush x:Key="CardBrush" Color="#F0EEE6"/>
+  <SolidColorBrush x:Key="SelectionBorderBrush" Color="#C96442"/>
+  <SolidColorBrush x:Key="IconPlateBrush" Color="#ECE9E0"/>
+  <SolidColorBrush x:Key="IconEdgeBrush" Color="Transparent"/>
+  <SolidColorBrush x:Key="DangerSoftBrush" Color="#F7E1DE"/>
+  <SolidColorBrush x:Key="ActionBrush" Color="#B5573A"/>
+  <SolidColorBrush x:Key="OnActionBrush" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="AccentTextBrush" Color="#9C4A2B"/>
+  <SolidColorBrush x:Key="OverlayBrush" Color="#73141413"/>
+  <SolidColorBrush x:Key="ToggleOffBrush" Color="#D3CFC4"/>
+  <!-- Window background: the surface colour, or a gradient for OLED day (Services/Backdrops.cs). -->
+  <SolidColorBrush x:Key="BackdropBrush" Color="#FAF9F5"/>
+
+  <!-- Serif for headings (embedded subset of Noto Serif SC), system sans for everything else. -->
+  <FontFamily x:Key="HeadingFont">pack://application:,,,/Assets/Fonts/#QuickMenu Serif SC, Georgia, Microsoft YaHei UI</FontFamily>
+  <FontFamily x:Key="BodyFont">Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI</FontFamily>
+
+  <!-- Original eight-ray spark used as the app's mark. -->
+  <Geometry x:Key="SparkMajor">M12,2.2 L12,8.5 M12,15.5 L12,21.8 M2.2,12 L8.5,12 M15.5,12 L21.8,12</Geometry>
+  <Geometry x:Key="SparkMinor">M5.1,5.1 L9.2,9.2 M14.8,14.8 L18.9,18.9 M18.9,5.1 L14.8,9.2 M9.2,14.8 L5.1,18.9</Geometry>
+  <Style x:Key="Spark" TargetType="Control">
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="IsTabStop" Value="False"/>
+    <Setter Property="Width" Value="12"/>
+    <Setter Property="Height" Value="12"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Control">
+          <Viewbox Stretch="Uniform">
+            <Canvas Width="24" Height="24">
+              <Path Data="{StaticResource SparkMajor}" Stroke="{TemplateBinding Foreground}" StrokeThickness="2.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+              <Path Data="{StaticResource SparkMinor}" Stroke="{TemplateBinding Foreground}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            </Canvas>
+          </Viewbox>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+</ResourceDictionary>
