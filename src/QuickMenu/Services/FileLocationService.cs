@@ -16,19 +16,7 @@ public static class FileLocationService
             if (!File.Exists(path)) return null;
             if (Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
             {
-                object? shell = null, shortcut = null;
-                try
-                {
-                    using var apartment = new ComScope(2);
-                    shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!);
-                    shortcut = ((dynamic)shell!).CreateShortcut(path);
-                    path = Environment.ExpandEnvironmentVariables((string)((dynamic)shortcut).TargetPath);
-                }
-                finally
-                {
-                    if (shortcut != null) Marshal.ReleaseComObject(shortcut);
-                    if (shell != null) Marshal.ReleaseComObject(shell);
-                }
+                using (new ComScope(2)) path = Environment.ExpandEnvironmentVariables(ShellLink.Target(path));
                 continue;
             }
             if (Path.GetExtension(path).Equals(".url", StringComparison.OrdinalIgnoreCase))

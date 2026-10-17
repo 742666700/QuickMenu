@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using QuickMenu.Interop;
 using QuickMenu.Models;
 
 namespace QuickMenu.Services;
@@ -30,24 +31,16 @@ internal static class DesktopCategoryService
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return DesktopCategory.Programs; }
         }
         if (!Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase)) return DesktopCategories.Classify(path);
-        object? shell = null, shortcut = null;
         try
         {
             var stamp = File.GetLastWriteTimeUtc(path);
             if (ShortcutCache.TryGetValue(path, out var cached) && cached.Stamp == stamp) return cached.Category;
-            shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!);
-            shortcut = ((dynamic)shell!).CreateShortcut(path);
-            string target = ((dynamic)shortcut).TargetPath;
+            var target = ShellLink.Target(path);
             var category = DesktopCategories.Classify(path, target);
             ShortcutCache[path] = (stamp, category, target);
             return category;
         }
-        catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
+        catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException or InvalidCastException)
         { return DesktopCategory.Programs; }
-        finally
-        {
-            if (shortcut != null) Marshal.ReleaseComObject(shortcut);
-            if (shell != null) Marshal.ReleaseComObject(shell);
-        }
     }
 }

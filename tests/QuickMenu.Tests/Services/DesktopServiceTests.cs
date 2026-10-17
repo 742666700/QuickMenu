@@ -40,25 +40,12 @@ public class DesktopServiceTests
         var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>
         {
-            object? shell = null;
-            object? link = null;
             try
             {
-                shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!);
-                dynamic shortcut = ((dynamic)shell!).CreateShortcut(shortcutPath);
-                link = shortcut;
-                shortcut.TargetPath = FixtureTestSupport.Executable;
-                shortcut.Arguments = $"--output \"{output}\" --wait";
-                shortcut.WorkingDirectory = folder;
-                shortcut.Save();
+                QuickMenu.Interop.ShellLink.Create(shortcutPath, FixtureTestSupport.Executable, $"--output \"{output}\" --wait", folder);
                 completed.SetResult(true);
             }
             catch (Exception ex) { completed.SetException(ex); }
-            finally
-            {
-                if (link != null) Marshal.ReleaseComObject(link);
-                if (shell != null) Marshal.ReleaseComObject(shell);
-            }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
