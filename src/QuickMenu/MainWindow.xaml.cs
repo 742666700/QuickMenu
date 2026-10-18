@@ -79,6 +79,8 @@ public partial class MainWindow : Window
         if (isQa) { _settings.ClockLabel = "美国时间"; _settings.SecondClockZone = "China Standard Time"; _settings.SecondClockLabel = "北京时间"; }
         // She stands outside the menu's window, so she follows it when the header is dragged.
         LocationChanged += (_, _) => { if (CompanionShown) _companion!.PlaceBeside(this); };
+        // Swiping past the end of a list would otherwise drag the whole window along with it.
+        ManipulationBoundaryFeedback += (_, e) => e.Handled = true;
         _session.Begin();
         _desktopView = CollectionViewSource.GetDefaultView(_desktop);
         _desktopView.Filter = item => { var desktopItem = (DesktopItem)item; return InDesktopFilter(desktopItem) && Matches(desktopItem.Name, _session.Searches.GetValueOrDefault(MenuPage.Desktop, "")); };
@@ -1043,10 +1045,14 @@ public partial class MainWindow : Window
         _companion.Hide();
     }
 
-    // The menu is always centred on its own; she stands to its right when that side of the screen has room
-    // for her, and stays away otherwise.
-    private void PlaceWindow() =>
-        _companionFits = HostNative.CenterOnPointerMonitor(this, BaseWidth, CompanionWanted && _companion is not null ? _companion.Footprint : default);
+    // She stands to the menu's right. The menu stays centred when that side of the screen has room for her; on a
+    // small screen the menu moves left for her and she may be drawn smaller. Only when even that fails she stays away.
+    private void PlaceWindow()
+    {
+        var size = HostNative.CenterOnPointerMonitor(this, BaseWidth, CompanionWanted && _companion is not null ? _companion.Footprint : default);
+        _companionFits = size > 0;
+        if (_companionFits) _companion!.Scale = size;
+    }
 
     // Long-press reordering: hold an item for a moment, then drag it. The list rearranges live while dragging;
     // releasing saves the arrangement as the custom sort, Esc or losing the mouse puts everything back.

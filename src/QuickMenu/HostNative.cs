@@ -99,33 +99,24 @@ internal static class HostNative
     }
 
     /// <summary>
-    /// Sizes the menu for the pointer's monitor and centres it; the menu is the main thing and stays centred
-    /// whether or not Claude娘 is out. Returns whether the <paramref name="companion"/> area (its width beyond the
-    /// menu's right edge, its height from the menu's bottom) fits on the same screen beside the centred menu.
+    /// Sizes and places the menu on the pointer's monitor (see <see cref="MenuPlacement.Plan"/>). Returns how big the
+    /// <paramref name="companion"/> (her full-size area beyond the menu's right edge and above its bottom) may be
+    /// drawn beside it, or 0 when she does not fit.
     /// </summary>
-    public static bool CenterOnPointerMonitor(Window window, double preferredWidth = 820, Size companion = default)
+    public static double CenterOnPointerMonitor(Window window, double preferredWidth = 820, Size companion = default)
     {
         GetCursorPos(out var point);
         var monitor = MonitorFromPoint(point, 2);
         var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
-        if (!GetMonitorInfo(monitor, ref info)) return false;
+        if (!GetMonitorInfo(monitor, ref info)) return 0;
         GetDpiForMonitor(monitor, 0, out var dpi, out _);
         var scale = (dpi == 0 ? 96 : dpi) / 96.0;
-        var availableWidth = info.Work.Right - info.Work.Left;
-        var availableHeight = info.Work.Bottom - info.Work.Top;
-        var logicalWidth = Math.Min(preferredWidth, Math.Max(320, (availableWidth - 24) / scale));
-        var logicalHeight = Math.Min(600, Math.Max(280, (availableHeight - 24) / scale));
-        window.MinWidth = Math.Min(520, logicalWidth);
-        window.MinHeight = Math.Min(380, logicalHeight);
-        window.Width = logicalWidth;
-        window.Height = logicalHeight;
-        var width = Math.Min(availableWidth, (int)Math.Round(logicalWidth * scale));
-        var height = Math.Min(availableHeight, (int)Math.Round(logicalHeight * scale));
-        var left = info.Work.Left + (availableWidth - width) / 2;
-        var top = info.Work.Top + (availableHeight - height) / 2;
-        SetWindowPos(new WindowInteropHelper(window).EnsureHandle(), new nint(-1), left, top, width, height, 0x0010);
-        var right = (int)Math.Round(companion.Width * scale);
-        var above = (int)Math.Round(Math.Max(0, companion.Height - logicalHeight) * scale);
-        return companion.Width > 0 && left + width + right <= info.Work.Right && top - above >= info.Work.Top;
+        var plan = MenuPlacement.Plan(info.Work.Left, info.Work.Top, info.Work.Right - info.Work.Left, info.Work.Bottom - info.Work.Top, scale, preferredWidth, companion);
+        window.MinWidth = Math.Min(520, plan.Width);
+        window.MinHeight = Math.Min(380, plan.Height);
+        window.Width = plan.Width;
+        window.Height = plan.Height;
+        SetWindowPos(new WindowInteropHelper(window).EnsureHandle(), new nint(-1), plan.Left, plan.Top, plan.PixelWidth, plan.PixelHeight, 0x0010);
+        return plan.CompanionScale;
     }
 }

@@ -52,7 +52,7 @@
             <TextBlock x:Name="PinnedMark" Text="&#xE718;" Style="{StaticResource Glyph}" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
             <TextBlock Text="{DynamicResource S.Pinned.Title}" FontSize="12.5" Foreground="{DynamicResource MutedBrush}" Margin="6,0,0,0" VerticalAlignment="Center"/>
           </StackPanel>
-          <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" VerticalAlignment="Center">
+          <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PanningMode="HorizontalOnly" VerticalAlignment="Center">
             <ItemsControl x:Name="PinnedItems" Focusable="False" PreviewMouseLeftButtonDown="Reorder_MouseDown" PreviewMouseMove="Reorder_MouseMove" PreviewMouseLeftButtonUp="Pinned_MouseLeftButtonUp" LostMouseCapture="Reorder_LostMouseCapture">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
@@ -149,7 +149,7 @@
             <Button Content="{DynamicResource S.Settings.Categories}" Tag="SectionCategories" Click="SettingsSection_Click"/>
             <Button Content="{DynamicResource S.Settings.About}" Tag="SectionAbout" Click="SettingsSection_Click"/>
           </StackPanel>
-          <ScrollViewer x:Name="SettingsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Margin="100,0,0,0" ScrollChanged="SettingsPanel_ScrollChanged">
+          <ScrollViewer x:Name="SettingsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly" Margin="100,0,0,0" ScrollChanged="SettingsPanel_ScrollChanged">
             <StackPanel x:Name="SettingsContent" Margin="0,0,10,16">
               <TextBlock x:Name="SectionGeneral" Text="{DynamicResource S.Settings.General}" Style="{StaticResource SettingsHeading}" Margin="6,2,0,10"/>
               <Border Background="{DynamicResource CardBrush}" CornerRadius="16" Padding="22,4,22,4">

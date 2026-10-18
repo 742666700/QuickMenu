@@ -34,6 +34,9 @@ internal sealed class CompanionWindow : Window
     private int _frame;
     private readonly Random _random = new();
     private bool _animated;
+    private CharacterPose? _pose;
+    private double _figureWidth, _figureHeight, _scale = 1;
+    private (Color Color, byte Halo, int Count, Geometry? Shape) _glint;
 
     public CompanionWindow()
     {
@@ -63,8 +66,15 @@ internal sealed class CompanionWindow : Window
     public ImageSource? Pose => _body.Source;
     public bool IsAnimating => _animated && _glints.IsRunning;
 
-    /// <summary>The space she takes beyond the menu: width right of its edge, height above its bottom.</summary>
-    public Size Footprint => new(Width - Overlap, Height - FeetDrop);
+    /// <summary>The space she takes beyond the menu at full size: width right of its edge, height above its bottom.</summary>
+    public Size Footprint => _pose is null ? default : new(_figureWidth + Pad - Overlap, _figureHeight + Pad - FeetDrop);
+
+    /// <summary>Her size relative to full size; screens with too little room beside the menu show her smaller.</summary>
+    public double Scale
+    {
+        get => _scale;
+        set { if (_scale == value) return; _scale = value; if (_pose is not null) Layout(); }
+    }
 
     /// <summary>Shows her in <paramref name="pose"/>, glinting in the theme's colour, and sizes the window to a figure <paramref name="figureHeight"/> DIPs tall.</summary>
     public void Present(string name, CharacterPose pose, double figureHeight, Color glint, byte glintHalo, int glintCount, Geometry? shape = null)
@@ -76,12 +86,24 @@ internal sealed class CompanionWindow : Window
         _blink.Source = pose.Blink;
         _frames = pose.Frames is { Count: > 1 } frames ? frames : null;
         _frame = 0;
-        var figureWidth = pose.Body.PixelWidth / (double)pose.Body.PixelHeight * figureHeight;
-        _figure.Width = figureWidth;
-        _figure.Height = figureHeight;
-        Width = figureWidth + Pad;
-        Height = figureHeight + Pad;
-        _glints.BuildGlints(new Rect(0, Pad, figureWidth, figureHeight), pose.Glints, glint, glintCount, glintHalo, shape);
+        _pose = pose;
+        _figureHeight = figureHeight;
+        _figureWidth = pose.Body.PixelWidth / (double)pose.Body.PixelHeight * figureHeight;
+        _glint = (glint, glintHalo, glintCount, shape);
+        Layout();
+        if (running) StartMotion();
+    }
+
+    private void Layout()
+    {
+        var running = _animated;
+        StopMotion();
+        double width = _figureWidth * _scale, height = _figureHeight * _scale;
+        _figure.Width = width;
+        _figure.Height = height;
+        Width = width + Pad;
+        Height = height + Pad;
+        _glints.BuildGlints(new Rect(0, Pad, width, height), _pose!.Glints, _glint.Color, _glint.Count, _glint.Halo, _glint.Shape);
         if (running) StartMotion();
     }
 
