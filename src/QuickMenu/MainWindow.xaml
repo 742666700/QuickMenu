@@ -184,6 +184,15 @@
                   <Border Height="1" Background="{DynamicResource BorderBrush}"/>
                   <Grid Margin="0,18,0,18">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="104"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="{DynamicResource S.Settings.SearchFocus}" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                    <StackPanel Grid.Column="1">
+                      <CheckBox x:Name="SearchFocusCheck" Content="{DynamicResource S.Settings.SearchFocusCheck}" AutomationProperties.Name="{DynamicResource S.Settings.SearchFocusCheck}"/>
+                      <TextBlock Text="{DynamicResource S.Settings.SearchFocusHint}" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="1,8,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Grid>
+                  <Border Height="1" Background="{DynamicResource BorderBrush}"/>
+                  <Grid Margin="0,18,0,18">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="104"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <TextBlock Text="{DynamicResource S.Settings.Greeting}" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,2,0,0"/>
                     <StackPanel Grid.Column="1">
                       <CheckBox x:Name="WorldClockCheck" Content="{DynamicResource S.Settings.ShowClock}" AutomationProperties.Name="{DynamicResource S.Settings.ShowClock}"/>

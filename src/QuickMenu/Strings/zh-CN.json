@@ -312,5 +312,8 @@
  "Window.Refused": "系统未允许切换到此窗口，请直接点击该应用或重试。",
  "Settings.Gamepad": "手柄",
  "Settings.GamepadCheck": "用手柄操作，菜单键 + 视图键呼出",
- "Settings.GamepadHint": "适合 Windows 掌机和 Xbox 手柄：十字键或左摇杆移动，A 确认，B 打开右键菜单或返回，LB / RB 切换桌面和运行应用，LT / RT 切换分类标签，Y 打开设置。"
+ "Settings.GamepadHint": "适合 Windows 掌机和 Xbox 手柄：十字键或左摇杆移动，A 确认，B 打开右键菜单或返回，LB / RB 切换桌面和运行应用，LT / RT 切换分类标签，Y 打开设置。",
+ "Settings.SearchFocus": "搜索框",
+ "Settings.SearchFocusCheck": "呼出菜单时，光标直接放在搜索框",
+ "Settings.SearchFocusHint": "开启（默认）：呼出后直接打字就能搜索。在 Windows 掌机等触屏设备上，系统可能因此自动弹出屏幕键盘，挡住部分菜单。关闭：呼出后先选中第一个项目，不会自动弹出屏幕键盘；用实体键盘打字仍会搜索，想用屏幕键盘时点一下搜索框即可。"
 }

@@ -312,5 +312,8 @@
  "Window.Refused": "Windows didn't allow switching to it; click the app directly or try again.",
  "Settings.Gamepad": "Controller",
  "Settings.GamepadCheck": "Use a controller; Menu + View opens the menu",
- "Settings.GamepadHint": "For Windows handhelds and Xbox controllers: D-pad or left stick to move, A to confirm, B for the right-click menu or back, LB / RB to switch pages, LT / RT to switch tabs, Y for settings."
+ "Settings.GamepadHint": "For Windows handhelds and Xbox controllers: D-pad or left stick to move, A to confirm, B for the right-click menu or back, LB / RB to switch pages, LT / RT to switch tabs, Y for settings.",
+ "Settings.SearchFocus": "Search box",
+ "Settings.SearchFocusCheck": "Put the cursor in the search box when the menu opens",
+ "Settings.SearchFocusHint": "On (default): start typing right away to search. On Windows handhelds and other touch screens, Windows may then pop up the on-screen keyboard over part of the menu. Off: the first item is selected instead and no on-screen keyboard appears; typing on a physical keyboard still searches, and tapping the search box brings the on-screen keyboard when you want it."
 }

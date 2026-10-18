@@ -37,6 +37,7 @@ public partial class MainWindow
         WorldClockCheck.Click += (_, _) => CommitSettings();
         StartupCheck.Click += (_, _) => CommitSettings();
         GamepadCheck.Click += (_, _) => CommitSettings();
+        SearchFocusCheck.Click += (_, _) => CommitSettings();
         LanguagePicker.SelectionChanged += (_, _) => CommitSettings();
         Loc.Changed += OnLanguageChanged;
         ClockLabelBox.TextChanged += (_, _) => CommitSettings();
@@ -60,6 +61,7 @@ public partial class MainWindow
         SecondClockLabelBox.Text = _settings.SecondClockLabel ?? "";
         StartupCheck.IsChecked = _settings.StartWithWindows;
         GamepadCheck.IsChecked = _settings.Gamepad;
+        SearchFocusCheck.IsChecked = _settings.FocusSearchOnOpen;
         _loadingSettings = false;
         UpdateClockOptions();
         RenderGameLibrary();
@@ -83,6 +85,7 @@ public partial class MainWindow
         next.SecondClockLabel = SecondClockLabelBox.Text.Trim();
         next.StartWithWindows = StartupCheck.IsChecked == true;
         next.Gamepad = GamepadCheck.IsChecked == true;
+        next.FocusSearchOnOpen = SearchFocusCheck.IsChecked == true;
         next.Language = LanguagePicker.SelectedIndex switch { 1 => Loc.Chinese, 2 => Loc.English, _ => "" };
         var relanguage = Loc.Resolve(next.Language) != Loc.Current;
         UpdateClockOptions(next);

@@ -52,6 +52,8 @@ public sealed class AppSettings
     public string Language { get; set; } = "";
     /// <summary>A controller can open the menu (Menu + View) and move through it.</summary>
     public bool Gamepad { get; set; } = true;
+    /// <summary>Opening the menu puts the cursor in the search box. Off for touch handhelds, where a focused text box can bring up the on-screen keyboard.</summary>
+    public bool FocusSearchOnOpen { get; set; } = true;
     /// <summary>The first-run welcome was shown.</summary>
     public bool WelcomeShown { get; set; }
     /// <summary>Settings format: files without it (0) come from 1.x and are migrated once (see SettingsService).</summary>

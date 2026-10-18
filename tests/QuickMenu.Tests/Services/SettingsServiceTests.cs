@@ -99,6 +99,25 @@ public class SettingsServiceTests
         finally { File.Delete(path); }
     }
 
+    // Older settings files have no such field: the search box keeps the cursor, as before.
+    [Theory]
+    [InlineData("{}", true)]
+    [InlineData("{\"FocusSearchOnOpen\":false}", false)]
+    public void SearchBoxFocusDefaultsOnAndPersists(string json, bool focus)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, json);
+            var service = new SettingsService(path, false);
+            var loaded = service.Load();
+            Assert.Equal(focus, loaded.FocusSearchOnOpen);
+            Assert.True(service.Save(loaded).Success);
+            Assert.Equal(focus, service.Load().FocusSearchOnOpen);
+        }
+        finally { File.Delete(path); }
+    }
+
     [Theory]
     [InlineData("null")]
     [InlineData("{\"HotkeyKey\":0}")]

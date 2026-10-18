@@ -144,7 +144,7 @@ public partial class MainWindow : Window
         ShowCompanion();
         Activate();
         if (!_isQa) HostNative.EnsureForeground(this);
-        SearchBox.Focus();
+        FocusStart();
         // The window appears under a pointer that has not moved, so WPF does not yet know what is beneath it and
         // ignores the wheel until the next move or click. Re-read the pointer once the new layout is in place.
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(Mouse.Synchronize));
@@ -369,7 +369,7 @@ public partial class MainWindow : Window
         if (e.Key == Key.Tab)
         {
             _session.Cycle(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
-            SetPage(_session.Page); SearchBox.Focus(); e.Handled = true; return;
+            SetPage(_session.Page); FocusStart(); e.Handled = true; return;
         }
         if (e.Key == Key.Enter) { ActivateSelected(); e.Handled = true; return; }
         var desktop = _session.Page == MenuPage.Desktop;
@@ -388,6 +388,24 @@ public partial class MainWindow : Window
         {
             if (!SearchBox.IsKeyboardFocusWithin) { SearchBox.Focus(); SearchBox.CaretIndex = SearchBox.Text.Length; }
         }
+    }
+
+    /// <summary>
+    /// Where the keyboard goes when the menu opens or changes page: the search box, or with that turned off in
+    /// settings the selected item, so a touch handheld does not pop up its on-screen keyboard. Typing still lands
+    /// in the search box either way (see the key handlers above).
+    /// </summary>
+    private void FocusStart()
+    {
+        if (_settings.FocusSearchOnOpen || _session.Page == MenuPage.Settings) { SearchBox.Focus(); return; }
+        var list = _session.Page == MenuPage.RunningApps ? AppsList : DesktopList;
+        if (list.SelectedIndex < 0 && list.Items.Count > 0) list.SelectedIndex = 0;
+        list.Focus();
+        // Item containers exist only after layout; move onto the selected one then, unless the user went elsewhere.
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            if (list.IsKeyboardFocusWithin && list.SelectedItem is { } item && list.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem row) row.Focus();
+        });
     }
 
     private void ActivateSelected()
@@ -495,7 +513,7 @@ public partial class MainWindow : Window
         _pendingApp = null; _pendingProcesses = null; _editingBuiltIn = null; _editingCategory = null;
         FinishWelcome();
         DialogCancel.Content = Loc.T("Dialog.Cancel");
-        SearchBox.Focus();
+        FocusStart();
     }
 
     private async void DialogConfirm_Click(object sender, RoutedEventArgs e)
@@ -758,7 +776,7 @@ public partial class MainWindow : Window
             button.SetResourceReference(Control.ForegroundProperty, selected ? "TextBrush" : "MutedBrush");
         }
     }
-    private void DesktopNav_Click(object sender, RoutedEventArgs e) { SetPage(MenuPage.Desktop); SearchBox.Focus(); }
+    private void DesktopNav_Click(object sender, RoutedEventArgs e) { SetPage(MenuPage.Desktop); FocusStart(); }
     private void UpdateSortLabel() => SortButton.Content = (_desktopPreferences.Sort switch { DesktopSort.Modified => Loc.T("Sort.Modified"), DesktopSort.Type => Loc.T("Sort.Type"), DesktopSort.Custom => Loc.T("Sort.Custom"), _ => Loc.T("Sort.Frequent") }) + "⌄";
 
     private ContextMenu NewDesktopMenu(FrameworkElement target)
@@ -850,7 +868,7 @@ public partial class MainWindow : Window
         _session.Selections[MenuPage.Desktop] = DesktopList.SelectedIndex;
         UpdateSortLabel(); UpdateEmptyState(); SetStatus("");
     }
-    private void AppsNav_Click(object sender, RoutedEventArgs e) { SetPage(MenuPage.RunningApps); SearchBox.Focus(); }
+    private void AppsNav_Click(object sender, RoutedEventArgs e) { SetPage(MenuPage.RunningApps); FocusStart(); }
     private void SettingsNav_Click(object sender, RoutedEventArgs e) => OpenSettings();
     private void Hide_Click(object sender, RoutedEventArgs e) => HideMenu();
     private void DialogCancel_Click(object sender, RoutedEventArgs e) => CloseOverlay();
