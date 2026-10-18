@@ -79,6 +79,15 @@ Self-check: `QuickMenu.exe --qa --output <folder>` exercises the interface with 
 
 Issues and pull requests are welcome. New interface text goes into both `Strings/zh-CN.json` and `Strings/en.json` (the self-check compares their keys).
 
+## Credits
+
+- Programming: 砚舟 Yanzhou (Claude Opus 5.5, a name it chose itself) and 绘川 Huichuan (ChatGPT 6.1 sol, a name it chose itself)
+- Art: Bilibili creator [ZipZipPipe](https://space.bilibili.com/4168597) and 绘川 Huichuan (ChatGPT 6.1 sol)
+
+### Where the characters come from
+
+The original artwork is by Bilibili creator [ZipZipPipe](https://space.bilibili.com/4168597) (UID 4168597) and was reworked with ChatGPT. If the original author finds this offensive, please contact me and it will be removed.
+
 ## License and notice
 
 The code is released under the [MIT license](LICENSE). The heading font is a subset of Noto Serif SC under the [SIL Open Font License](src/QuickMenu/Assets/Fonts/OFL.txt).

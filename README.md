@@ -79,6 +79,15 @@ dotnet run --project src/QuickMenu           # 直接运行
 
 欢迎提交 Issue 和 Pull Request。新增界面文字时，请同时加到 `Strings/zh-CN.json` 和 `Strings/en.json`（自检会检查两边的键是否一致）。
 
+## 制作
+
+- 主程：砚舟（Claude Opus 5.5，它自己起的名字）、绘川（ChatGPT 6.1 sol，它自己起的名字）
+- 主美：B 站 UP 主 [ZipZipPipe](https://space.bilibili.com/4168597)、绘川（ChatGPT 6.1 sol）
+
+### AI娘形象出处
+
+原素材取自 Bilibili UP 主 [ZipZipPipe](https://space.bilibili.com/4168597)（UID：4168597），通过 ChatGPT 二次生成完成。如原作者感到冒犯，请联系我删除。
+
 ## 许可与声明
 
 代码以 [MIT 许可](LICENSE) 开源。标题字体是 Noto Serif SC 的子集，采用 [SIL Open Font License](src/QuickMenu/Assets/Fonts/OFL.txt)。
