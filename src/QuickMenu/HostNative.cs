@@ -112,11 +112,17 @@ internal static class HostNative
         GetDpiForMonitor(monitor, 0, out var dpi, out _);
         var scale = (dpi == 0 ? 96 : dpi) / 96.0;
         var plan = MenuPlacement.Plan(info.Work.Left, info.Work.Top, info.Work.Right - info.Work.Left, info.Work.Bottom - info.Work.Top, scale, preferredWidth, companion);
+        var hwnd = new WindowInteropHelper(window).EnsureHandle();
+        // Step onto the target monitor first, keeping the size (SWP_NOSIZE | SWP_NOACTIVATE). Crossing to a monitor
+        // with another scale makes WPF rescale the window by the DPI ratio; that has to happen before the final size
+        // is set. Otherwise the correct pixel size is rescaled again: 125 % → 100 % shrank the menu to 80 %, and
+        // 100 % → 125 % made it 125 % too large, after which it lost activation and hid, leaving only her on screen.
+        SetWindowPos(hwnd, new nint(-1), plan.Left, plan.Top, 0, 0, 0x0001 | 0x0010);
         window.MinWidth = Math.Min(520, plan.Width);
         window.MinHeight = Math.Min(380, plan.Height);
         window.Width = plan.Width;
         window.Height = plan.Height;
-        SetWindowPos(new WindowInteropHelper(window).EnsureHandle(), new nint(-1), plan.Left, plan.Top, plan.PixelWidth, plan.PixelHeight, 0x0010);
+        SetWindowPos(hwnd, new nint(-1), plan.Left, plan.Top, plan.PixelWidth, plan.PixelHeight, 0x0010);
         return plan.CompanionScale;
     }
 }

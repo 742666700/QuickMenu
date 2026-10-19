@@ -121,6 +121,13 @@ public partial class MainWindow : Window
 
     public void InvokeMenu()
     {
+        _opening = true;
+        try { OpenMenu(); }
+        finally { _opening = false; }
+    }
+
+    private void OpenMenu()
+    {
         InvocationCount++;
         _previousForeground = HostNative.GetForegroundWindow();
         if (_previousForeground == new WindowInteropHelper(this).Handle) _previousForeground = 0;
@@ -728,7 +735,11 @@ public partial class MainWindow : Window
 
     private void HideMenu() { if (_gamepad != null) _gamepad.Navigating = false; _ambient.Stop(); HideCompanion(); CancelReorder(); if (_desktopMenu != null) _desktopMenu.IsOpen = false; OfficePopup.IsOpen = false; CloseOverlay(); _refreshTimer.Stop(); _invocation?.Cancel(); Hide(); }
     private void SetStatus(string message) { if (StatusText is not null) { StatusText.Text = message; StatusText.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible; } }
-    private void Window_Deactivated(object sender, EventArgs e) { if (!_disposed && !_isQa && !HasOverlay && _desktopMenu?.IsOpen != true && _session.Page != MenuPage.Settings) HideMenu(); }
+    // Opening on a screen with another scale moves her window across it too, and WPF's DPI handling for that
+    // move briefly takes activation from the menu. That is not the user clicking away, so it must not hide the menu;
+    // InvokeMenu activates the menu again once she is in place.
+    private bool _opening;
+    private void Window_Deactivated(object sender, EventArgs e) { if (!_disposed && !_opening && !_isQa && !HasOverlay && _desktopMenu?.IsOpen != true && _session.Page != MenuPage.Settings) HideMenu(); }
     private void Window_Closing(object? sender, CancelEventArgs e) { if (!_disposed) { e.Cancel = true; HideMenu(); } }
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
