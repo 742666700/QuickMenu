@@ -128,4 +128,15 @@ public class GameSourcesTests
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
+
+    [Theory]
+    [InlineData("steam://rungameid/570", true)]
+    [InlineData("com.epicgames.launcher://apps/ns%3Aid%3AFortnite?action=launch&silent=true", true)]
+    [InlineData("uplay://launch/635/0", true)]
+    [InlineData(@"shell:AppsFolder\Microsoft.Game_8wekyb3d8bbwe!Game", true)]
+    [InlineData("ms-settings:", false)]
+    [InlineData("https://example.com/game", false)]
+    [InlineData("steam://install/570", false)]
+    [InlineData("calc", false)]
+    public void OnlyStoreLinksStartAsGames(string link, bool started) => Assert.Equal(started, DesktopService.IsStoreLink(link));
 }

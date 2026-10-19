@@ -108,11 +108,17 @@ public sealed class DesktopService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or System.Security.SecurityException) { return null; }
     }
 
+    /// <summary>The kinds of link the game sources build: Steam, Epic, Ubisoft and Xbox (packaged app) games.</summary>
+    private static readonly string[] StoreLinks = ["steam://rungameid/", "com.epicgames.launcher://apps/", "uplay://launch/", @"shell:AppsFolder\"];
+    public static bool IsStoreLink(string link) => StoreLinks.Any(prefix => link.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+
     public OperationResult Open(DesktopItem item)
     {
-        // Store games start through their store's link (steam://, uplay://, the Epic launcher, shell:AppsFolder\…).
+        // Store games start through their store's link (steam://, uplay://, the Epic launcher, shell:AppsFolder\…). Only
+        // those kinds of link are started: anything else in game-library.json that is not a full path is refused.
         if (item.GameSource != null && !Path.IsPathFullyQualified(item.ParsingName))
         {
+            if (!IsStoreLink(item.ParsingName)) return new(false, Loc.T("Games.StartFailed") + Loc.T("Games.UnknownLink"));
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(item.ParsingName) { UseShellExecute = true })?.Dispose();

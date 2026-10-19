@@ -219,6 +219,7 @@
  "Games.SaveFailed": "Couldn't save the game library: ",
  "Games.Started": "Game started.",
  "Games.StartFailed": "Couldn't start the game: ",
+ "Games.UnknownLink": "this isn't a recognised game link.",
  "Category.Documents": "Documents",
  "Category.Spreadsheets": "Spreadsheets",
  "Category.Presentations": "Presentations",

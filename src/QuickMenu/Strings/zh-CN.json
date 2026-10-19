@@ -219,6 +219,7 @@
  "Games.SaveFailed": "游戏库设置保存失败：",
  "Games.Started": "游戏已启动。",
  "Games.StartFailed": "游戏启动失败：",
+ "Games.UnknownLink": "这不是可识别的游戏启动链接。",
  "Category.Documents": "文档",
  "Category.Spreadsheets": "表格",
  "Category.Presentations": "演示文稿",
