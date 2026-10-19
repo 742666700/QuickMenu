@@ -610,13 +610,13 @@ internal sealed partial class AmbientScene
     }
 
     /// <summary>
-    /// Starry violet: two little star twins with faces, one blue and one pink, fly out of the tip of the big crystal star
-    /// in the corner, chase each other round a figure eight trailing sparkles, high-five with a flash and fly home,
-    /// where the tip glints.
+    /// Starry violet: two little star twins with faces, one blue and one pink, fly out of the top tip of the glowing star
+    /// in the corner (at 776, 486 in the design box), chase each other round a figure eight trailing sparkles, high-five
+    /// with a flash and fly home, where the tip glints.
     /// </summary>
     private void AddTwinStars(double width, double height)
     {
-        var stage = Stage(new Point(776, 456), width, height);
+        var stage = Stage(new Point(776, 486), width, height);
         var gold = Solid("#E8CB8A");
         var ink = Solid("#2A2350");
         var white = Solid("#FFFFFF");
@@ -624,8 +624,8 @@ internal sealed partial class AmbientScene
         var burst = NewMoment();
         var routes = new Dictionary<int, Route>
         {
-            [-1] = new([("M776,468 C770,500 712,532 673,556", 0.3, 1.2, Eased), (FigureEight(673, 556, 46, 38, -1), 1.2, 3.8, Glide), ("M673,556 C700,536 768,512 776,470", 4.1, 5.1, Eased)]),
-            [1] = new([("M776,468 C790,512 676,520 687,556", 0.3, 1.2, Eased), (FigureEight(687, 556, 46, 38, 1), 1.2, 3.8, Glide), ("M687,556 C680,520 784,508 776,470", 4.1, 5.1, Eased)])
+            [-1] = new([("M776,498 C770,524 712,540 673,556", 0.3, 1.2, Eased), (FigureEight(673, 556, 46, 38, -1), 1.2, 3.8, Glide), ("M673,556 C700,540 768,528 776,500", 4.1, 5.1, Eased)]),
+            [1] = new([("M776,498 C792,530 676,526 687,556", 0.3, 1.2, Eased), (FigureEight(687, 556, 46, 38, 1), 1.2, 3.8, Glide), ("M687,556 C680,530 784,524 776,500", 4.1, 5.1, Eased)])
         };
         foreach (var (side, sparkle) in new[] { (-1, "#BFE4FF"), (1, "#FFD0E6") })
         {
@@ -660,7 +660,7 @@ internal sealed partial class AmbientScene
             Drawn("M680,546 Q681.2,554.8 690,556 Q681.2,557.2 680,566 Q678.8,557.2 670,556 Q678.8,554.8 680,546 Z", white));
         clap.Box.Opacity = 0;
         clap.Scale.ScaleX = clap.Scale.ScaleY = 0;
-        var tip = Part(stage, 776, 457, Drawn("M776,449 Q776.9,456.1 784,457 Q776.9,457.9 776,465 Q775.1,457.9 768,457 Q775.1,456.1 776,449 Z", white, gold, 0.6));
+        var tip = Part(stage, 776, 487, Drawn("M776,479 Q776.9,486.1 784,487 Q776.9,487.9 776,495 Q775.1,487.9 768,487 Q775.1,486.1 776,479 Z", white, gold, 0.6));
         tip.Scale.ScaleX = tip.Scale.ScaleY = 0;
         Grow(burst, clap, (0, 0), (3.8, 0), (3.95, 1.4), (4.35, 0));
         Fade(burst, clap, (0, 0), (3.8, 0), (3.85, 1), (4.35, 0));
