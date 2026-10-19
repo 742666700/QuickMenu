@@ -26,4 +26,19 @@ public class GameLibraryTests
             Assert.Throws<OperationCanceledException>(() => GameLibraryService.Scan(new[] { root }, cancellation.Token));
         } finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
+
+    [Fact]
+    public void ScanKeepsGamesWhoseNamesContainToolWords()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "QuickMenuScan-" + Guid.NewGuid());
+        try {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "steam_api64.dll"), "");
+            var games = new[] { "Dispatch", "GhostOfTsushima", "Ghost", "CrashBandicoot", "Downloader" };
+            var tools = new[] { "UnityCrashHandler64", "CrashReportClient", "crashpad_handler", "GameHost", "ModLoader", "patcher", "DLCPatch", "unins000", "vc_redist.x64", "GameLauncher" };
+            foreach (var name in games.Concat(tools)) File.WriteAllText(Path.Combine(root, name + ".exe"), "");
+            var found = GameLibraryService.Scan(new[] { root }).Select(Path.GetFileNameWithoutExtension).Order(StringComparer.OrdinalIgnoreCase);
+            Assert.Equal(games.Order(StringComparer.OrdinalIgnoreCase), found);
+        } finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
 }

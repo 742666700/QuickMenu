@@ -18,9 +18,17 @@ public sealed class GameLibraryService(string? configurationPath = null)
     public static IReadOnlyList<(string Id, string Name)> Sources =>
         new[] { "Steam", "Epic", "GOG", "Ubisoft", "Xbox", "Installed", "Folders" }.Select(id => (id, Loc.T("Source." + id))).ToArray();
 
-    private static readonly Regex SkippedExecutable = new(@"crash|unins|setup|install|redist|patch|config|savefolder|python|zsync|helper|host|loader|launcher|^startup$|^start_protected_game$|修改|安装|卸载|补丁|开始游戏", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    // Tools shipped next to games: installers, redistributables, launchers, config tools and the like.
+    private static readonly Regex SkippedExecutable = new(@"unins|setup|install|redist|config|savefolder|python|zsync|helper|launcher|^startup$|^start_protected_game$|修改|安装|卸载|补丁|开始游戏", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    // These mark tools too but turn up inside game names (Dispatch, Ghost of Tsushima, Crash Bandicoot, Downloader), so they
+    // count only as whole words of the name split at case changes, digits and separators (UnityCrashHandler64 → unity crash
+    // handler 64), and "crash" only when a crash tool follows.
+    private static readonly Regex SkippedWord = new(@"\bpatch\w*|\bhost\b|\bloader\b|\bcrash(pad|handler|report|sender|dump)\w*|\bcrash\w* (handler|report\w*|sender|dump\w*)\b", RegexOptions.Compiled);
+    private static readonly Regex WordBreak = new(@"(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})|(?<=\p{L})(?=\p{N})|(?<=\p{N})(?=\p{L})", RegexOptions.Compiled);
+    private static readonly Regex Separators = new(@"[^\p{L}\p{N}]+", RegexOptions.Compiled);
     private static readonly Regex SkippedFolder = new(@"backup|rollback|quarantine|备份|回滚|修改器|^\.|^(lib|renpy|node_modules|Redist|EasyAntiCheat|me3|amd-nr-runtime|dlssnr-amd|data|plugins?)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    internal static bool IsSkippedExecutable(string stem) => SkippedExecutable.IsMatch(stem);
+    internal static bool IsSkippedExecutable(string stem) =>
+        SkippedExecutable.IsMatch(stem) || SkippedWord.IsMatch(Separators.Replace(WordBreak.Replace(stem, " "), " ").Trim().ToLowerInvariant());
     internal static bool IsSkippedFolder(string name) => name.StartsWith('_') || SkippedFolder.IsMatch(name);
 
     private readonly string _path = configurationPath ?? DefaultConfigurationPath;
@@ -140,7 +148,7 @@ public sealed class GameLibraryService(string? configurationPath = null)
                 foreach (var exe in files.Where(path => Path.GetExtension(path).Equals(".exe", StringComparison.OrdinalIgnoreCase)))
                 {
                     var stem = Path.GetFileNameWithoutExtension(exe);
-                    if (SkippedExecutable.IsMatch(stem)) continue;
+                    if (IsSkippedExecutable(stem)) continue;
                     var rpgMaker = stem.Equals("Game", StringComparison.OrdinalIgnoreCase) && (Folder("www") || (Folder("js") && Folder("data")) || names.Contains("Game.ini"));
                     var engine = Folder(stem + "_Data")
                         || (Folder("renpy") && Folder("game"))
