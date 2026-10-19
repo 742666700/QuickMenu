@@ -138,8 +138,8 @@ public static class Backdrops
     private static Brush Frozen(Brush brush) { brush.Freeze(); return brush; }
 
     // Starry violet (Gemini): a deep violet night whose top right glows with Gemini's blue, violet and rose like an
-    // aurora, and, low in the corner, a large crystal star like the ornament in her hair, cut into light and dark
-    // facets with a champagne-gold rim, half sunk below the edge and barely there.
+    // aurora, and, low in the corner, a large soft star of light like the ornament in her hair, half sunk below the
+    // edge and barely there.
     private static Brush StarNight()
     {
         const double w = 820, h = 600;
@@ -152,10 +152,66 @@ public static class Backdrops
         group.Children.Add(new GeometryDrawing(Glow(0x5B, 0x49, 0xD6, 0x1C, new Point(0.0, 1.0), 0.5), null, bounds));
         // A violet light behind the emblem so it reads as lit crystal rather than a dark shape.
         group.Children.Add(new GeometryDrawing(Glow(0x9B, 0x7C, 0xFF, 0x26, new Point(0.96, 1.0), 0.3), null, bounds));
-        var emblem = CrystalStar(150, 0x2E, 0x9A, 1.4);
-        emblem.Transform = new TranslateTransform(w - 44, h + 6);
+        var emblem = GlowStar(128);
+        emblem.Transform = new TranslateTransform(w - 44, h + 14);
         group.Children.Add(emblem);
         return Finish(group);
+    }
+
+    // The emblem: a four-pointed star of light centred on (0, 0) with tips radius out. Its sides curve gently in to
+    // rounded tips; it is filled with a faint wash of Gemini's colours, edged by a violet glow that spreads outward
+    // and fades toward the tips, and crossed by thin ridges of light that fade out before the tips. No hard rim or
+    // facets, so it stays a quiet light in the corner rather than a sharp shape.
+    private static DrawingGroup GlowStar(double radius)
+    {
+        RadialGradientBrush Radial(byte r, byte g, byte b, double extent, params (double Alpha, double Offset)[] stops)
+        {
+            var brush = new RadialGradientBrush { MappingMode = BrushMappingMode.Absolute, Center = new Point(), GradientOrigin = new Point(), RadiusX = radius * extent, RadiusY = radius * extent };
+            foreach (var (alpha, offset) in stops) brush.GradientStops.Add(new GradientStop(Color.FromArgb((byte)Math.Round(alpha * 255), r, g, b), offset));
+            return brush;
+        }
+        Pen Glow(double width, double strength) =>
+            new(Radial(0xC2, 0xA8, 0xFF, 1, (strength, 0), (strength / 4, 1)), width) { LineJoin = PenLineJoin.Round };
+        var outline = SoftStarOutline(radius, 8, 24, 0.5);
+        var wash = new LinearGradientBrush { MappingMode = BrushMappingMode.Absolute, StartPoint = new Point(-radius, -radius), EndPoint = new Point(radius, radius) };
+        foreach (var (color, offset) in new[] { ("#26A8DCFF", 0.0), ("#26D4B8FF", 0.5), ("#26FFC0DE", 1.0) }) wash.GradientStops.Add(new GradientStop(Hex(color), offset));
+        var ridges = new GeometryGroup();
+        for (var k = 0; k < 4; k++)
+        {
+            var angle = Math.PI / 2 * k - Math.PI / 2;
+            ridges.Children.Add(new LineGeometry(new Point(), new Point(Math.Cos(angle) * radius * 0.96, Math.Sin(angle) * radius * 0.96)));
+        }
+        var group = new DrawingGroup();
+        group.Children.Add(new GeometryDrawing(Radial(0x9B, 0x7C, 0xFF, 1.35, (0.24, 0), (0, 1)), null, new EllipseGeometry(new Point(), radius * 1.35, radius * 1.35)));
+        group.Children.Add(new GeometryDrawing(null, Glow(16, 0.05), outline));
+        group.Children.Add(new GeometryDrawing(null, Glow(8, 0.07), outline));
+        group.Children.Add(new GeometryDrawing(wash, Glow(2.5, 0.16), outline));
+        var ridgePen = new Pen(Radial(0xF4, 0xF0, 0xFF, 1, (0.3, 0.1), (0, 0.95)), 1) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+        group.Children.Add(new GeometryDrawing(null, ridgePen, ridges));
+        return group;
+    }
+
+    // A four-pointed star outline centred on (0, 0). Each tip is a round cap between two shoulders depth back from the
+    // tip and shoulder to either side of it; the sides between tips curve inward, their handles leaving each shoulder
+    // along the cap's tangent, reach × radius long (longer handles make a thinner waist).
+    private static Geometry SoftStarOutline(double radius, double shoulder, double depth, double reach)
+    {
+        Vector Axis(int k) { var angle = Math.PI / 2 * k - Math.PI / 2; return new Vector(Math.Cos(angle), Math.Sin(angle)); }
+        Point Control(int k) => (Point)(Axis(k) * (radius + depth));
+        Point Shoulder(int k, double side) { var axis = Axis(k); return (Point)(axis * (radius - depth) + new Vector(-axis.Y, axis.X) * (shoulder * side)); }
+        Point Handle(int k, double side) { var shoulderPoint = Shoulder(k, side); var away = shoulderPoint - Control(k); away.Normalize(); return shoulderPoint + away * (reach * radius); }
+        var outline = new StreamGeometry();
+        using (var draw = outline.Open())
+        {
+            draw.BeginFigure(Shoulder(0, -1), true, true);
+            for (var k = 0; k < 4; k++)
+            {
+                var next = (k + 1) % 4;
+                draw.QuadraticBezierTo(Control(k), Shoulder(k, 1), true, true);
+                draw.BezierTo(Handle(k, 1), Handle(next, -1), Shoulder(next, -1), true, true);
+            }
+        }
+        return outline;
     }
 
     /// <summary>
