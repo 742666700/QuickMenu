@@ -1,5 +1,6 @@
 param(
-    # Also publish two portable zips to artifacts/: a self-contained one and a small one (-small) that needs the .NET 10 Desktop Runtime.
+    # Also publish two portable zips to artifacts/: a self-contained one and a small one (-small) that needs the .NET 10 Desktop Runtime,
+    # plus QuickMenu-Setup-<version>-x64.exe when NSIS is installed.
     [switch]$Package,
     # Skip tests that need a signed-in desktop session (windows, tray, hotkeys), e.g. on a build server.
     [switch]$SkipInteractiveTests,
@@ -39,4 +40,13 @@ if($Package) {
         if($WithSource -and -not $build.Suffix) { & (Join-Path $PSScriptRoot 'package-source.ps1') -Destination (Join-Path $output "QuickMenu-Source-$version.zip") }
         Compress-Archive -Path (Join-Path $output '*') -DestinationPath (Join-Path $workspace "artifacts\QuickMenu-Portable-$version-x64$($build.Suffix).zip") -Force
     }
+    # The installer wraps the small build and installs the .NET 10 Desktop Runtime first when it is missing.
+    $makensis=(Get-Command makensis -ErrorAction SilentlyContinue).Source
+    if(-not $makensis){ $makensis=@("${env:ProgramFiles(x86)}\NSIS\makensis.exe","$env:ProgramFiles\NSIS\makensis.exe") | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1 }
+    if($makensis) {
+        $setup=Join-Path $workspace "artifacts\QuickMenu-Setup-$version-x64.exe"
+        & $makensis /V2 /INPUTCHARSET UTF8 "/DVERSION=$version" "/DSOURCE_DIR=$(Join-Path $workspace "artifacts\portable-$version-small")" "/DICON=$(Join-Path $workspace 'src\QuickMenu\Assets\quick-menu.ico')" "/DOUTPUT=$setup" (Join-Path $PSScriptRoot 'installer\QuickMenu.nsi')
+        if($LASTEXITCODE -ne 0){throw 'Building the installer failed.'}
+    }
+    else { Write-Warning 'NSIS (makensis) was not found, so no installer was built. Install it with: winget install NSIS.NSIS' }
 }

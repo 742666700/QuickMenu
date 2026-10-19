@@ -27,7 +27,11 @@ Press one hotkey and a menu opens in the middle of the screen with everything on
 
 ## Download and use
 
-Each version on [Releases](../../releases) has two zips. They hold the same code, features and interface; only the .NET runtime differs:
+Each version on [Releases](../../releases) has an installer and two portable zips, all with the same code, features and interface.
+
+**Recommended: the installer `QuickMenu-Setup-<version>-x64.exe` (about 25 MB).** It installs for the current user; QuickMenu itself needs no administrator rights. It checks for the .NET 10 Desktop Runtime first: if it is there, QuickMenu is installed straight away; if not, the runtime is downloaded from Microsoft and installed (this one step asks for administrator rights), then QuickMenu. Open it from the Start menu; to upgrade, run the newer installer; uninstall it from Settings → Apps, which keeps your settings in `%LOCALAPPDATA%\QuickMenu`.
+
+If you would rather not install anything, use a portable zip. They differ only in the .NET runtime:
 
 | | Full: `QuickMenu-Portable-<version>-x64.zip` | Small: `QuickMenu-Portable-<version>-x64-small.zip` |
 | --- | --- | --- |
@@ -46,11 +50,11 @@ dotnet --list-runtimes
 
 If `dotnet` is not recognised, no .NET runtime is installed. Other versions alone (.NET 8, 9 or a later 11) are not enough; the small zip needs 10.x. To install it, download ".NET Desktop Runtime 10" for x64 from the official page above, or run `winget install Microsoft.DotNet.DesktopRuntime.10`. Starting the small zip without it shows a .NET message with a download button; it never fails silently.
 
-**For AI assistants or scripts installing it for someone:** run `dotnet --list-runtimes` first. If `Microsoft.WindowsDesktop.App 10.*` is listed, download `-x64-small.zip`; otherwise download `-x64.zip` (or, with the user's consent, install the runtime with winget and then take the small zip).
+**For AI assistants or scripts installing it for someone:** the simplest is to download and run the installer (add `/S` for a silent install); it handles the runtime itself. For a portable zip, run `dotnet --list-runtimes` first. If `Microsoft.WindowsDesktop.App 10.*` is listed, download `-x64-small.zip`; otherwise download `-x64.zip` (or, with the user's consent, install the runtime with winget and then take the small zip).
 
 Steps:
 
-1. Download one of the zips and unzip it anywhere.
+1. Run the installer, or download one of the zips and unzip it anywhere.
 2. Run `QuickMenu.exe`. The default hotkey is **Alt + Space**; change it in settings.
 3. When hidden it waits in the notification area; settings can start it when you sign in.
 
@@ -65,7 +69,8 @@ Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows.
 ```powershell
 ./scripts/build.ps1                          # build and run every test
 ./scripts/build.ps1 -SkipInteractiveTests    # skip tests that need a desktop session (as CI does)
-./scripts/build.ps1 -Package                 # also make artifacts/QuickMenu-Portable-<version>-x64.zip and -x64-small.zip
+./scripts/build.ps1 -Package                 # also make artifacts/QuickMenu-Portable-<version>-x64.zip and -x64-small.zip,
+                                             # plus the installer QuickMenu-Setup-<version>-x64.exe when NSIS is installed (winget install NSIS.NSIS)
 dotnet run --project src/QuickMenu           # run it
 ```
 
