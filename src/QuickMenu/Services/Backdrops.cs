@@ -103,8 +103,6 @@ public static class Backdrops
         group.Children.Add(new GeometryDrawing(Glow(0xB8, 0xC8, 0xFF, 0x30, new Point(0.98, 0.0), 0.36), null, bounds));
 
         // Swells, back to front. Each fades in from the left so the list's left columns stay on near-white.
-        Geometry Swell(double y0, double dip, double rise, double yEnd) => Geometry.Parse(FormattableString.Invariant(
-            $"M0,{y0} C{w * 0.22},{y0 - rise} {w * 0.42},{y0 + dip} {w * 0.66},{y0} C{w * 0.82},{y0 - rise * 0.6} {w * 0.92},{yEnd - rise * 0.3} {w},{yEnd} L{w},{h} L0,{h} Z"));
         Brush Water(string left, string mid, string right)
         {
             var fill = new LinearGradientBrush { StartPoint = new Point(0, 0.5), EndPoint = new Point(1, 0.5) };
@@ -113,9 +111,9 @@ public static class Backdrops
             fill.GradientStops.Add(new GradientStop(Hex(right), 1));
             return fill;
         }
-        var back = Swell(h * 0.76, h * 0.06, h * 0.05, h * 0.70);
-        var middle = Swell(h * 0.86, h * 0.05, h * 0.04, h * 0.81);
-        var front = Swell(h * 0.95, h * 0.03, h * 0.025, h * 0.91);
+        var back = DeepSeaSwell(0, w, h);
+        var middle = DeepSeaSwell(1, w, h);
+        var front = DeepSeaSwell(2, w, h);
         group.Children.Add(new GeometryDrawing(Water("#004D6BFE", "#0E4D6BFE", "#244D6BFE"), new Pen(Water("#004D6BFE", "#244D6BFE", "#404D6BFE"), 1), back));
         group.Children.Add(new GeometryDrawing(Water("#006FC3FF", "#106FC3FF", "#1E5C8DFF"), null, middle));
         // The silk highlight along the middle swell's crest.
@@ -133,6 +131,22 @@ public static class Backdrops
         group.Children.Add(new GeometryDrawing(tail, new Pen(Frozen(new SolidColorBrush(Color.FromArgb(0x70, 0x4D, 0x6B, 0xFE))), 0.9), fluke));
         group.Children.Add(new GeometryDrawing(Water("#004D6BFE", "#1C4D6BFE", "#344D6BFE"), null, front));
         return Finish(group);
+    }
+
+    /// <summary>
+    /// The deep sea's swells (0 back, 1 middle, 2 front) in a <paramref name="w"/> × <paramref name="h"/> box: the water
+    /// below the crest down to the bottom edge. Shared with the scene so its whale meets the same waterline.
+    /// </summary>
+    internal static Geometry DeepSeaSwell(int layer, double w, double h)
+    {
+        var (y0, dip, rise, yEnd) = layer switch
+        {
+            0 => (h * 0.76, h * 0.06, h * 0.05, h * 0.70),
+            1 => (h * 0.86, h * 0.05, h * 0.04, h * 0.81),
+            _ => (h * 0.95, h * 0.03, h * 0.025, h * 0.91)
+        };
+        return Geometry.Parse(FormattableString.Invariant(
+            $"M0,{y0} C{w * 0.22},{y0 - rise} {w * 0.42},{y0 + dip} {w * 0.66},{y0} C{w * 0.82},{y0 - rise * 0.6} {w * 0.92},{yEnd - rise * 0.3} {w},{yEnd} L{w},{h} L0,{h} Z"));
     }
 
     private static Brush Frozen(Brush brush) { brush.Freeze(); return brush; }

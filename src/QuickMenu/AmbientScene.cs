@@ -22,14 +22,17 @@ namespace QuickMenu;
 /// and the clocks end with the event, leaving nothing to tick in between. Only truly continuous motion keeps a clock
 /// running, at the lowest frame rate that still looks smooth for its speed.
 /// </remarks>
-internal sealed class AmbientScene
+internal sealed partial class AmbientScene
 {
     // Drifting lights and clouds move a pixel or two a second and look the same at 6 fps; falling petals and twinkles
     // need 12; only the shooting star asks for 24.
     private const int SlowFrameRate = 6, FrameRate = 12, FastFrameRate = 24;
     private sealed record Motion(IAnimatable Target, DependencyProperty Property, AnimationTimeline Timeline, double Phase);
-    /// <summary>Clocks that play together once every <see cref="Period"/>; between plays, every target rests at its base value.</summary>
-    private sealed record Burst(TimeSpan Period, double Phase, List<(IAnimatable Target, DependencyProperty Property, AnimationTimeline Timeline)> Parts);
+    /// <summary>
+    /// Clocks that play together once every <see cref="Period"/>; between plays, every target rests at its base value.
+    /// With a <see cref="StartDelay"/> the burst opens every showing that long after it starts, instead of keeping its rhythm.
+    /// </summary>
+    private sealed record Burst(TimeSpan Period, double Phase, List<(IAnimatable Target, DependencyProperty Property, AnimationTimeline Timeline)> Parts, TimeSpan? StartDelay = null);
 
     private readonly Canvas _layer;
     private readonly RotateTransform _sparkTurn = new();
@@ -38,6 +41,8 @@ internal sealed class AmbientScene
     private readonly List<DispatcherTimer> _timers = new();
     private readonly List<(IAnimatable Target, DependencyProperty Property, AnimationClock Clock)> _clocks = new();
     private readonly Random _random = new(7);
+    private Burst? _moment;
+    private TranslateTransform? _whaleRise;
     private TimeSpan _elapsed;
     private DateTime _startedAt;
 
@@ -99,8 +104,8 @@ internal sealed class AmbientScene
         }
         foreach (var burst in _bursts)
         {
-            // Keep each burst's place in its rhythm across hide and show.
-            var due = burst.Period.Ticks * burst.Phase - _elapsed.Ticks % burst.Period.Ticks;
+            // Keep each burst's place in its rhythm across hide and show, unless it opens every showing.
+            var due = burst.StartDelay?.Ticks ?? burst.Period.Ticks * burst.Phase - _elapsed.Ticks % burst.Period.Ticks;
             if (due < 0) due += burst.Period.Ticks;
             var timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromTicks(Math.Max((long)due, TimeSpan.TicksPerMillisecond)) };
             timer.Tick += (_, _) => { timer.Interval = burst.Period; Play(burst); };
@@ -115,6 +120,26 @@ internal sealed class AmbientScene
         IsRunning = false;
         _elapsed += DateTime.UtcNow - _startedAt;
         RemoveClocks();
+    }
+
+    /// <summary>The DeepSeek whale's rise: at rest she is under the water (null in other themes).</summary>
+    internal TranslateTransform? WhaleRise => _whaleRise;
+
+    /// <summary>For self-check captures: holds the theme's signature moment at <paramref name="at"/> into it until <see cref="Stop"/>.</summary>
+    internal bool PreviewMoment(TimeSpan at)
+    {
+        if (_moment is null) return false;
+        IsRunning = true;
+        _startedAt = DateTime.UtcNow;
+        foreach (var (target, property, timeline) in _moment.Parts)
+        {
+            var clock = timeline.CreateClock();
+            target.ApplyAnimationClock(property, clock);
+            clock.Controller!.Pause();
+            clock.Controller.SeekAlignedToLastTick(at, TimeSeekOrigin.BeginTime);
+            _clocks.Add((target, property, clock));
+        }
+        return true;
     }
 
     private void Play(Burst burst)
@@ -143,6 +168,8 @@ internal sealed class AmbientScene
         RemoveClocks();
         _motions.Clear();
         _bursts.Clear();
+        _moment = null;
+        _whaleRise = null;
         _layer.Children.Clear();
         IsRunning = false;
         _sparkTurn.Angle = 0;
@@ -150,9 +177,9 @@ internal sealed class AmbientScene
 
     private void Add(IAnimatable target, DependencyProperty property, AnimationTimeline timeline, double phase) => _motions.Add(new(target, property, timeline, phase));
 
-    private Burst NewBurst(double periodSeconds, double phase)
+    private Burst NewBurst(double periodSeconds, double phase, double? startDelaySeconds = null)
     {
-        var burst = new Burst(TimeSpan.FromSeconds(periodSeconds), phase, new());
+        var burst = new Burst(TimeSpan.FromSeconds(periodSeconds), phase, new(), startDelaySeconds is { } delay ? TimeSpan.FromSeconds(delay) : null);
         _bursts.Add(burst);
         return burst;
     }
@@ -174,7 +201,7 @@ internal sealed class AmbientScene
     // OLED night: a clear night sky along the top of the menu. Pinpoint stars twinkle, Claude's spark glints
     // like the brightest stars and now and then a small shooting star slips across. Nothing moves over the
     // icons, and nearly every pixel stays #000000: on black, light has to be small and bright to look like
-    // light; large and dim, it only looks brown.
+    // light; large and dim, it only looks brown. Now and then a sleepy moon looks in (AddSleepyMoon).
     private void BuildNightSky(double width, double height)
     {
         var header = new Rect(width * 0.55, 0, width * 0.36, 40);
@@ -203,6 +230,7 @@ internal sealed class AmbientScene
         // Two small shooting stars on different rhythms, so they never feel like a loop.
         AddMeteor(new Point(width * 0.72, 18), 13, 0.55);
         AddMeteor(new Point(width * 0.38, 10), 19, 0.1);
+        AddSleepyMoon(width, height);
     }
 
     /// <summary>A short, faint streak that slides down-left for 0.7 s once every <paramref name="seconds"/>.</summary>
@@ -258,31 +286,44 @@ internal sealed class AmbientScene
     /// Eased key frames at (seconds, value), played once for a burst. When it ends the property goes back to its base
     /// value, so the last frame should match it.
     /// </summary>
-    private static DoubleAnimationUsingKeyFrames Once(int frameRate, params (double Seconds, double Value)[] frames)
+    private static DoubleAnimationUsingKeyFrames Once(int frameRate, params (double Seconds, double Value)[] frames) =>
+        Keyed(frameRate, frames.Select(frame => (frame.Seconds, frame.Value, Eased)).ToArray());
+
+    /// <summary>Like <see cref="Once"/>, with the curve into each key frame given.</summary>
+    private static DoubleAnimationUsingKeyFrames Keyed(int frameRate, params (double Seconds, double Value, KeySpline Curve)[] frames)
     {
         var animation = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromSeconds(frames[^1].Seconds), FillBehavior = FillBehavior.Stop };
         Timeline.SetDesiredFrameRate(animation, frameRate);
-        foreach (var (seconds, value) in frames)
-            animation.KeyFrames.Add(new SplineDoubleKeyFrame(value, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(seconds)), new KeySpline(0.4, 0, 0.2, 1)));
+        foreach (var (seconds, value, curve) in frames)
+            animation.KeyFrames.Add(new SplineDoubleKeyFrame(value, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(seconds)), curve));
         return animation;
     }
 
-    // OLED day: extra light pools float over the gradient backdrop and breathe.
+    // Eased in and out; thrown up (fast, then slowing at the top); falling (slow, then faster); and steady.
+    private static readonly KeySpline Eased = Frozen(new KeySpline(0.4, 0, 0.2, 1)), Thrown = Frozen(new KeySpline(0.25, 0.6, 0.45, 1)),
+        Falling = Frozen(new KeySpline(0.55, 0, 0.85, 0.45)), Steady = Frozen(new KeySpline(0, 0, 1, 1));
+    private static KeySpline Frozen(KeySpline curve) { curve.Freeze(); return curve; }
+
+    // OLED day: extra light pools float over the gradient backdrop and breathe, and now and then a paper plane
+    // loops across the top (AddPaperPlane).
     private void BuildDaylight(double width, double height)
     {
         AddGlow(Color.FromArgb(0x66, 0xFF, 0xD2, 0xB8), width * 0.7, new Point(width * 0.2, height * 0.15), new Vector(width * 0.2, height * 0.12), 26, 21);
         AddGlow(Color.FromArgb(0x55, 0xFF, 0xC8, 0xE6), width * 0.55, new Point(width * 0.85, height * 0.2), new Vector(width * 0.15, height * 0.18), 23, 29);
         AddGlow(Color.FromArgb(0x55, 0xB4, 0xC8, 0xFF), width * 0.75, new Point(width * 0.75, height * 0.95), new Vector(width * 0.2, height * 0.1), 29, 24);
+        AddPaperPlane(width, height);
     }
 
     // Pearl (ChatGPT): two little clouds like ChatGPT娘's companion drift along the empty band above the search box,
-    // and three soft sparkles breathe beside them. Nothing moves over the list.
+    // and three soft sparkles breathe beside them; the larger cloud now and then makes a rainbow (AddRainbowCloud).
+    // Nothing moves over the list.
     private void BuildPearl(double width, double height)
     {
         // White on top with her wings' lilac underneath, so the clouds read on the pearl backdrop without an outline.
         var fill = new LinearGradientBrush(Colors.White, Color.FromRgb(0xD9, 0xD2, 0xF0), 90); fill.Freeze();
         var cloudShape = Geometry.Parse("M7,16 A5,5 0 0 1 6.5,6.4 A7.5,7.5 0 0 1 20,4.6 A5.5,5.5 0 0 1 28.6,9.2 A3.6,3.6 0 0 1 28,16 Z"); cloudShape.Freeze();
-        foreach (var (x, y, size, seconds, phase) in new[] { (0.6, 9.0, 34.0, 38.0, 0.15), (0.78, 22.0, 24.0, 46.0, 0.65) })
+        AddRainbowCloud(width);
+        foreach (var (x, y, size, seconds, phase) in new[] { (0.78, 22.0, 24.0, 46.0, 0.65) })
         {
             var cloud = new Path { Data = cloudShape, Fill = fill, Width = size, Height = size * 0.5, Stretch = Stretch.Uniform };
             var drift = new TranslateTransform();
@@ -297,7 +338,8 @@ internal sealed class AmbientScene
 
     // Deep sea (DeepSeek): light on the water. A glint runs along the crest of the back swell, drifting and
     // brightening slowly; a cyan light breathes under the surface; and every few seconds a tiny luminous bubble
-    // rises from the water at the right and fades. The swells and the whale's tail sit still in the backdrop.
+    // rises from the water at the right and fades. The swells and the big whale's tail sit still in the backdrop,
+    // and beside the tail a little whale comes up now and then to spout (see AddWhale).
     private void BuildDeepSea(double width, double height)
     {
         AddGlow(Color.FromArgb(0x1C, 0x6F, 0xC3, 0xFF), width * 0.5, new Point(width * 0.82, height * 0.92), new Vector(width * 0.05, height * 0.03), 31, 23);
@@ -341,11 +383,14 @@ internal sealed class AmbientScene
             burst.Parts.Add((rise, TranslateTransform.XProperty, Once(FrameRate, (0, 0), (1.1, 3), (2.2, -2), (3.2, 1))));
             burst.Parts.Add((bubble, UIElement.OpacityProperty, Once(FrameRate, (0, 0), (0.5, 0.9), (2.4, 0.7), (3.2, 0))));
         }
+
+        AddWhale(width, height);
     }
 
     // Starry violet (Gemini): faint, still pinpoint stars in the empty bands; crystal stars like the ornaments in
     // Gemini娘's hair flare one after another with a thin cross of light; and a little charm of two crystal stars
-    // hangs on a gold chain from the top right corner and sways now and then.
+    // hangs on a gold chain from the top right corner and sways now and then. Twin stars come out of the big crystal
+    // star to play now and then (AddTwinStars).
     private void BuildStarViolet(double width, double height)
     {
         var dust = new GeometryGroup();
@@ -416,6 +461,7 @@ internal sealed class AmbientScene
         _layer.Children.Add(charm);
         var swing = NewBurst(11, 0.3);
         swing.Parts.Add((sway, RotateTransform.AngleProperty, Once(FrameRate, (0, 0), (0.5, 7), (1.1, -4.5), (1.7, 2.5), (2.3, -1), (2.9, 0))));
+        AddTwinStars(width, height);
     }
 
     /// <summary>Small shapes with a soft halo that flare and turn a little, one after another, then rest.</summary>
@@ -445,7 +491,8 @@ internal sealed class AmbientScene
         }
     }
 
-    // Cream daisy: orange daisies from Claude娘's outfit drift down across the window, turning as they fall.
+    // Cream daisy: orange daisies from Claude娘's outfit drift down across the window, turning as they fall; in the
+    // corner a bud opens for a bee and a butterfly now and then (AddBeeGarden).
     private void BuildPetals(double width, double height)
     {
         AddGlow(Color.FromArgb(0x2C, 0xF0, 0x7A, 0x3A), width * 0.7, new Point(width * 0.92, height * 0.55), new Vector(width * 0.06, height * 0.1), 19, 27);
@@ -474,6 +521,7 @@ internal sealed class AmbientScene
             Add(fall, TranslateTransform.XProperty, new DoubleAnimation(0, drift, duration) { RepeatBehavior = RepeatBehavior.Forever }, phase);
             Add(turn, RotateTransform.AngleProperty, new DoubleAnimation(turn.Angle, turn.Angle + (i % 2 == 0 ? 360 : -360), TimeSpan.FromSeconds(Between(8, 16))) { RepeatBehavior = RepeatBehavior.Forever }, 0);
         }
+        AddBeeGarden(width, height);
     }
 
     /// <summary>A soft radial light that wanders on a slow Lissajous path (different X and Y periods) and breathes.</summary>

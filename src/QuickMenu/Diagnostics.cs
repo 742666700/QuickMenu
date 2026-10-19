@@ -203,7 +203,7 @@ internal static class Diagnostics
         checks["OLED uses opaque black surfaces"] = window.IsDarkAppearance && new[] { "SurfaceBrush", "SidebarBrush", "InputBrush", "PopupBrush", "CardBrush", "IconPlateBrush" }.All(key => ((SolidColorBrush)System.Windows.Application.Current.Resources[key]).Color == Colors.Black);
         Capture(window, Path.Combine(output, "desktop-oled.png"), 1);
         // the stars, three glints, two shooting stars
-        checks["OLED night scene is the night sky"] = window.AmbientLayer.Children.Count == 6 && window.Ambient.Mode == ThemeMode.Oled;
+        checks["OLED night scene is the night sky"] = window.AmbientLayer.Children.Count == 7 && window.Ambient.Mode == ThemeMode.Oled;
         var sceneBlack = BlackShare(window);
         window.AmbientLayer.Visibility = Visibility.Hidden;
         var contentBlack = BlackShare(window);
@@ -241,7 +241,7 @@ internal static class Diagnostics
         window.ApplyTheme(ThemeMode.Cream);
         window.UpdateLayout();
         // two glows, ten daisies
-        checks["cream daisy theme has falling daisies and no character of its own"] = window.AmbientLayer.Children.Count == 12 && !window.CompanionShown && window.ActualWidth <= 821;
+        checks["cream daisy theme has falling daisies and no character of its own"] = window.AmbientLayer.Children.Count == 13 && !window.CompanionShown && window.ActualWidth <= 821;
         Capture(window, Path.Combine(output, "desktop-cream.png"), 1);
         window.ApplyTheme(ThemeMode.System);
         checks["following the system shows OLED day or night"] = window.Ambient.Mode == (ThemeService.IsDark(ThemeMode.System) ? ThemeMode.Oled : ThemeMode.OledDay);
@@ -687,7 +687,7 @@ internal static class Diagnostics
         window.PreviewCompanion("nobody");
         checks["unknown character is safely hidden"] = !window.CompanionShown && !window.GreetingAvatar.IsVisible;
         window.PreviewCompanion(null);
-        foreach (var (theme, elements, dark) in new[] { (ThemeMode.ChatGpt, 5, false), (ThemeMode.DeepSeek, 5, false), (ThemeMode.Gemini, 8, true) })
+        foreach (var (theme, elements, dark) in new[] { (ThemeMode.ChatGpt, 5, false), (ThemeMode.DeepSeek, 6, false), (ThemeMode.Gemini, 9, true) })
         {
             window.ApplyTheme(theme);
             checks[$"{theme}: appearance and scene elements"] = window.IsDarkAppearance == dark && window.AmbientLayer.Children.Count == elements;
@@ -705,6 +705,17 @@ internal static class Diagnostics
             Capture(window, Path.Combine(output, $"settings-{theme.ToString().ToLowerInvariant()}.png"), 1);
             window.PreviewPage(MenuPage.RunningApps); Capture(window, Path.Combine(output, $"apps-{theme.ToString().ToLowerInvariant()}.png"), 1);
             window.PreviewPage(MenuPage.Desktop);
+        }
+        // Each theme's signature moment, held at its liveliest for a look. DeepSeek's whale rests under the water between spouts.
+        foreach (var (theme, seconds) in new[] { (ThemeMode.Oled, 3.0), (ThemeMode.OledDay, 2.25), (ThemeMode.Cream, 3.4), (ThemeMode.ChatGpt, 3.3), (ThemeMode.DeepSeek, 1.85), (ThemeMode.Gemini, 3.9) })
+        {
+            window.ApplyTheme(theme);
+            var resting = theme != ThemeMode.DeepSeek || window.Ambient.WhaleRise is { Y: >= 40 };
+            var shown = window.Ambient.PreviewMoment(TimeSpan.FromSeconds(seconds));
+            var surfaced = theme != ThemeMode.DeepSeek || window.Ambient.WhaleRise is { Y: > -3 and < 1 };
+            Capture(window, Path.Combine(output, $"moment-{theme.ToString().ToLowerInvariant()}.png"), 1);
+            window.Ambient.Stop();
+            checks[$"{theme}: signature moment plays and leaves nothing behind"] = resting && shown && surfaced && (theme != ThemeMode.DeepSeek || window.Ambient.WhaleRise is { Y: >= 40 });
         }
         await YieldRender();
     }
