@@ -6,8 +6,9 @@ on:
     tags: ['v*']
   pull_request:
 
+# Read-only by default; only the release job, run for v* tags, may write (to create the GitHub Release).
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -18,7 +19,8 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       # NSIS builds the installer (QuickMenu-Setup-<version>-x64.exe) from the small zip's files.
-      # Skipped when the runner already has it; Chocolatey is retried, then NSIS's own setup is fetched from SourceForge.
+      # Skipped when the runner already has it; Chocolatey is retried, then NSIS's own setup is fetched from SourceForge
+      # (curl: SourceForge hands PowerShell's client a web page instead) and run only if it matches the pinned hash.
       - name: Install NSIS
         shell: pwsh
         run: |
@@ -30,11 +32,14 @@ jobs:
             Write-Warning "choco install nsis failed (attempt $attempt, exit $LASTEXITCODE)."
             Start-Sleep -Seconds (20 * $attempt)
           }
-          $setup = Join-Path $env:RUNNER_TEMP 'nsis-setup.exe'
-          Invoke-WebRequest -UseBasicParsing -MaximumRetryCount 3 -RetryIntervalSec 15 -Uri 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10-setup.exe' -OutFile $setup
+          $setup = Join-Path $env:RUNNER_TEMP 'nsis-3.10-setup.exe'
+          curl.exe -sSL --fail --retry 3 --retry-delay 15 -A 'curl' -o $setup 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10-setup.exe'
+          $hash = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash
+          if ($hash -ne '4313D352E0DAFD1F22B6517126A655CAE3B444FA758D2845EDDFBE72F24F7BDD') { throw "nsis-3.10-setup.exe has an unexpected SHA-256 ($hash)." }
           Start-Process -FilePath $setup -ArgumentList '/S' -Wait
           if (-not (Test-Path -LiteralPath "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { throw 'NSIS could not be installed.' }
-      # Tests that need a signed-in desktop (windows, tray, hotkeys) are skipped on the build machine.
+      # Tests that need a signed-in desktop (windows, tray, hotkeys) are skipped on the build machine; they run in the
+      # local build before every release tag.
       - name: Build, test and package
         shell: pwsh
         run: ./scripts/build.ps1 -SkipInteractiveTests -Package
@@ -51,8 +56,19 @@ jobs:
             artifacts/QuickMenu-Setup-*-x64.exe
             artifacts/QuickMenu-Setup-*-x64-offline.exe
           if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: QuickMenu-portable
+          path: artifacts
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
