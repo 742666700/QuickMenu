@@ -56,8 +56,10 @@ if($Package) {
             Invoke-WebRequest -UseBasicParsing -Uri 'https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe' -OutFile $runtime
         }
         $signature=Get-AuthenticodeSignature -LiteralPath $runtime
-        $runtimeVersion=(Get-Item -LiteralPath $runtime).VersionInfo.ProductVersion
-        if($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation' -or $runtimeVersion -notlike '10.*') {
+        $runtimeInfo=(Get-Item -LiteralPath $runtime).VersionInfo
+        $runtimeVersion=$runtimeInfo.ProductVersion
+        # The product name as well: any Windows binary is Microsoft-signed with a 10.* version (notepad.exe is 10.0.x).
+        if($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation' -or $runtimeVersion -notlike '10.*' -or $runtimeInfo.ProductName -notlike 'Microsoft Windows Desktop Runtime 10.*') {
             Remove-Item -LiteralPath $runtime -Force
             throw "The downloaded .NET runtime installer is not a Microsoft-signed .NET 10 runtime (signature $($signature.Status), version $runtimeVersion)."
         }

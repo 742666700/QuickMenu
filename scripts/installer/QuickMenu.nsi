@@ -32,6 +32,7 @@ SetCompressor /SOLID lzma
 !include MUI2.nsh
 !include LogicLib.nsh
 !include FileFunc.nsh
+!include WordFunc.nsh
 
 Name "$(AppName)"
 OutFile "${OUTPUT}"
@@ -83,6 +84,8 @@ LangString RuntimeInstalling ${LANG_SIMPCHINESE} "正在安装 .NET 10 桌面运
 LangString RuntimeInstalling ${LANG_ENGLISH} "Installing the .NET 10 Desktop Runtime (needs administrator rights; choose Yes when asked)..."
 LangString RuntimeFailed ${LANG_SIMPCHINESE} "未能安装 .NET 10 桌面运行时，快捷菜单需要它才能运行。$\r$\n$\r$\n可能是网络无法连接微软服务器，或没有允许管理员权限。$\r$\n$\r$\n是否打开微软的下载页面手动安装？安装后再运行本安装程序即可。"
 LangString RuntimeFailed ${LANG_ENGLISH} "The .NET 10 Desktop Runtime could not be installed, and QuickMenu needs it.$\r$\n$\r$\nThe download may have been blocked, or administrator rights were declined.$\r$\n$\r$\nOpen Microsoft's download page to install it by hand? Then run this setup again."
+LangString RuntimeUntrusted ${LANG_SIMPCHINESE} "下载到的运行时安装包没有有效的微软签名，或版本不是 10，已拒绝运行。"
+LangString RuntimeUntrusted ${LANG_ENGLISH} "The downloaded runtime installer is not validly signed by Microsoft as version 10, so it was not run."
 LangString RuntimeAbort ${LANG_SIMPCHINESE} "缺少 .NET 10 桌面运行时，安装已停止。"
 LangString RuntimeAbort ${LANG_ENGLISH} "Setup stopped: the .NET 10 Desktop Runtime is missing."
 LangString CloseApp ${LANG_SIMPCHINESE} "快捷菜单正在运行，需要先关闭它才能继续安装。$\r$\n$\r$\n点击“确定”关闭并继续。"
@@ -128,8 +131,19 @@ Function EnsureRuntime
   ${EndIf}
 !endif
   ${If} ${FileExists} "$PLUGINSDIR\dotnet-desktop-runtime.exe"
-    DetailPrint "$(RuntimeInstalling)"
-    ExecShellWait "runas" "$PLUGINSDIR\dotnet-desktop-runtime.exe" "/install /quiet /norestart" SW_SHOWNORMAL
+    ; It runs with administrator rights, so only if it really is Microsoft's .NET 10 runtime installer: validly signed by
+    ; Microsoft and named as the 10.x Windows Desktop Runtime, the same check the build makes before packing it into the
+    ; offline setup.
+    ${WordReplace} "$PLUGINSDIR\dotnet-desktop-runtime.exe" "'" "''" "+" $1
+    nsExec::ExecToLog `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$$f='$1'; $$s=Get-AuthenticodeSignature -LiteralPath $$f; $$i=(Get-Item -LiteralPath $$f).VersionInfo; if ($$s.Status -eq 'Valid' -and $$s.SignerCertificate.Subject -match 'O=Microsoft Corporation' -and $$i.ProductVersion -like '10.*' -and $$i.ProductName -like 'Microsoft Windows Desktop Runtime 10.*') { exit 0 } else { exit 1 }"`
+    Pop $0
+    ${If} $0 == 0
+      DetailPrint "$(RuntimeInstalling)"
+      ExecShellWait "runas" "$PLUGINSDIR\dotnet-desktop-runtime.exe" "/install /quiet /norestart" SW_SHOWNORMAL
+    ${Else}
+      DetailPrint "$(RuntimeUntrusted)"
+      Delete "$PLUGINSDIR\dotnet-desktop-runtime.exe"
+    ${EndIf}
   ${EndIf}
   !insertmacro HasRuntime $0
   ${If} $0 == 1
