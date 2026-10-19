@@ -17,16 +17,50 @@ public sealed class SettingsService
         _manageStartup = manageStartup;
     }
 
+    /// <summary>
+    /// Reads the settings. A field that is out of range goes back to its default and the rest are kept; a file that
+    /// cannot be read at all gives the defaults. Either way a copy of the file is kept beside it and the log says why,
+    /// since the next save replaces it.
+    /// </summary>
     public AppSettings Load()
     {
+        AppSettings? settings;
         try
         {
             if (!File.Exists(_path)) return new() { Version = AppSettings.CurrentVersion };
-            var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_path));
-            if (settings != null) Migrate(settings);
-            return settings != null && Validate(settings) ? settings : new() { Version = AppSettings.CurrentVersion, WelcomeShown = true };
+            settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_path));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { return new() { Version = AppSettings.CurrentVersion, WelcomeShown = true }; }
+        catch (JsonException ex) { SetAside($"Settings could not be read ({ex.Message}); the defaults are used."); return Fallback(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.Log(ex); return Fallback(); }
+        if (settings == null) { SetAside("Settings were empty; the defaults are used."); return Fallback(); }
+        Migrate(settings);
+        if (Repair(settings) is { Count: > 0 } reset) SetAside($"Settings had an invalid {string.Join(" and ", reset)}; only that was reset.");
+        return settings;
+    }
+
+    private static AppSettings Fallback() => new() { Version = AppSettings.CurrentVersion, WelcomeShown = true };
+
+    /// <summary>Keeps a copy of the settings file next to it (settings.broken-&lt;time&gt;.json) and logs why.</summary>
+    private void SetAside(string reason)
+    {
+        try
+        {
+            var copy = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_path))!,
+                $"{Path.GetFileNameWithoutExtension(_path)}.broken-{DateTime.Now:yyyyMMdd-HHmmss}{Path.GetExtension(_path)}");
+            File.Copy(_path, copy, true);
+            App.Log(new InvalidDataException($"{reason} The file as it was is kept at {copy}."));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.Log(new InvalidDataException(reason, ex)); }
+    }
+
+    /// <summary>Puts each invalid field back to its default and names what was reset.</summary>
+    private static List<string> Repair(AppSettings settings)
+    {
+        var reset = new List<string>();
+        var defaults = new AppSettings();
+        if (!ValidHotkey(settings)) { settings.HotkeyKey = defaults.HotkeyKey; settings.HotkeyModifiers = defaults.HotkeyModifiers; reset.Add("hotkey"); }
+        if (!Enum.IsDefined(settings.Theme)) { settings.Theme = defaults.Theme; reset.Add("theme"); }
+        return reset;
     }
 
     public OperationResult Save(AppSettings settings)
@@ -98,6 +132,6 @@ public sealed class SettingsService
         settings.ClockLabel ??= ""; settings.SecondClockLabel ??= "";
     }
 
-    private static bool Validate(AppSettings settings) => settings.HotkeyKey is > 0 and <= 254 &&
-        settings.HotkeyModifiers is > 0 and <= 15 && Enum.IsDefined(settings.Theme);
+    private static bool ValidHotkey(AppSettings settings) => settings.HotkeyKey is > 0 and <= 254 && settings.HotkeyModifiers is > 0 and <= 15;
+    private static bool Validate(AppSettings settings) => ValidHotkey(settings) && Enum.IsDefined(settings.Theme);
 }

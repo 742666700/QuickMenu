@@ -18,9 +18,31 @@ public class SettingsServiceTests
             Assert.Equal(1u, settings.HotkeyModifiers);
             Assert.Equal(32u, settings.HotkeyKey);
             Assert.False(settings.StartWithWindows);
+            // The unreadable file is kept beside it, since the next save replaces it.
+            Assert.Equal("{ invalid", File.ReadAllText(Assert.Single(SetAside(path))));
         }
-        finally { File.Delete(path); }
+        finally { File.Delete(path); foreach (var copy in SetAside(path)) File.Delete(copy); }
     }
+
+    [Fact]
+    public void AnInvalidFieldIsResetWithoutLosingTheOthers()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "{\"HotkeyKey\":0,\"HotkeyModifiers\":2,\"Theme\":7,\"Character\":\"gemini\",\"StayOpenOnClickOutside\":true}");
+            var loaded = new SettingsService(path, false).Load();
+            Assert.Equal((1u, 32u), (loaded.HotkeyModifiers, loaded.HotkeyKey));
+            Assert.Equal(ThemeMode.DeepSeek, loaded.Theme);
+            Assert.Equal("gemini", loaded.Character);
+            Assert.True(loaded.StayOpenOnClickOutside);
+            Assert.Single(SetAside(path));
+        }
+        finally { File.Delete(path); foreach (var copy in SetAside(path)) File.Delete(copy); }
+    }
+
+    private static string[] SetAside(string path) =>
+        Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileNameWithoutExtension(path) + ".broken-*");
 
     [Theory]
     [InlineData(ThemeMode.ChatGpt)]
@@ -151,7 +173,7 @@ public class SettingsServiceTests
             Assert.Equal(ThemeMode.System, loaded.Theme);
             Assert.Equal(32u, loaded.HotkeyKey);
         }
-        finally { File.Delete(path); }
+        finally { File.Delete(path); foreach (var copy in SetAside(path)) File.Delete(copy); }
     }
 
     [Fact]
