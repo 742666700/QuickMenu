@@ -315,5 +315,8 @@
  "Settings.GamepadHint": "For Windows handhelds and Xbox controllers: D-pad or left stick to move, A to confirm, B for the right-click menu or back, LB / RB to switch pages, LT / RT to switch tabs, Y for settings.",
  "Settings.SearchFocus": "Search box",
  "Settings.SearchFocusCheck": "Put the cursor in the search box when the menu opens",
- "Settings.SearchFocusHint": "On (default): start typing right away to search. On Windows handhelds and other touch screens, Windows may then pop up the on-screen keyboard over part of the menu. Off: the first item is selected instead and no on-screen keyboard appears; typing on a physical keyboard still searches, and tapping the search box brings the on-screen keyboard when you want it."
+ "Settings.SearchFocusHint": "On (default): start typing right away to search. On Windows handhelds and other touch screens, Windows may then pop up the on-screen keyboard over part of the menu. Off: the first item is selected instead and no on-screen keyboard appears; typing on a physical keyboard still searches, and tapping the search box brings the on-screen keyboard when you want it.",
+ "Settings.StayOpen": "Clicking outside",
+ "Settings.StayOpenCheck": "Keep the menu open when clicking outside it",
+ "Settings.StayOpenHint": "Off (default): clicking anywhere outside the menu hides it. On: the menu stays where it is, behind the window you clicked, so it does not cover what you are working in; press the hotkey or click the tray icon to bring it back to the front with your search and page as they were. Esc, or the hotkey while the menu is in front, still hides it."
 }

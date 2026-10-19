@@ -64,6 +64,28 @@ internal static class HostNative
         SetWindowPos(hwnd, new nint(-1), rect.Right - (int)Math.Round(overlap * scale), rect.Bottom + (int)Math.Round(drop * scale) - height, 0, 0, 0x0001 | 0x0010);
     }
 
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
+
+    /// <summary>Puts the menu back above every window, as when it is opened (SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE).</summary>
+    public static void BringToTop(Window window) =>
+        SetWindowPos(new WindowInteropHelper(window).Handle, new nint(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
+
+    /// <summary>
+    /// Lets the menu stop floating above everything and slips it just behind the window that now has focus, so it no
+    /// longer covers what was clicked. HWND_NOTOPMOST alone would leave it on top of all ordinary windows.
+    /// </summary>
+    public static void SendBehindForeground(Window window)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == 0) return;
+        SetWindowPos(hwnd, new nint(-2), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
+        var foreground = GetForegroundWindow();
+        if (foreground == 0 || foreground == hwnd) return;
+        GetWindowThreadProcessId(foreground, out uint owner);
+        if (owner == (uint)Environment.ProcessId) return;
+        SetWindowPos(hwnd, foreground, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
+    }
+
     /// <summary>
     /// Window.Activate can be refused when another app holds the foreground. Joining that app's input queue for
     /// the call lets the menu take focus; the queues are detached again immediately.

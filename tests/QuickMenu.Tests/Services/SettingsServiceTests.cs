@@ -118,6 +118,25 @@ public class SettingsServiceTests
         finally { File.Delete(path); }
     }
 
+    // Older settings files have no such field: clicking outside still hides the menu, as before.
+    [Theory]
+    [InlineData("{}", false)]
+    [InlineData("{\"StayOpenOnClickOutside\":true}", true)]
+    public void StayOpenDefaultsOffAndPersists(string json, bool stayOpen)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, json);
+            var service = new SettingsService(path, false);
+            var loaded = service.Load();
+            Assert.Equal(stayOpen, loaded.StayOpenOnClickOutside);
+            Assert.True(service.Save(loaded).Success);
+            Assert.Equal(stayOpen, service.Load().StayOpenOnClickOutside);
+        }
+        finally { File.Delete(path); }
+    }
+
     [Theory]
     [InlineData("null")]
     [InlineData("{\"HotkeyKey\":0}")]

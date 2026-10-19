@@ -54,6 +54,8 @@ public sealed class AppSettings
     public bool Gamepad { get; set; } = true;
     /// <summary>Opening the menu puts the cursor in the search box. Off for touch handhelds, where a focused text box can bring up the on-screen keyboard.</summary>
     public bool FocusSearchOnOpen { get; set; } = true;
+    /// <summary>Clicking outside leaves the menu open, behind the window clicked, instead of hiding it. Off by default.</summary>
+    public bool StayOpenOnClickOutside { get; set; }
     /// <summary>The first-run welcome was shown.</summary>
     public bool WelcomeShown { get; set; }
     /// <summary>Settings format: files without it (0) come from 1.x and are migrated once (see SettingsService).</summary>

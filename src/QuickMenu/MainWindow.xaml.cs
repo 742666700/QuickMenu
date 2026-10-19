@@ -121,6 +121,8 @@ public partial class MainWindow : Window
 
     public void InvokeMenu()
     {
+        // With "keep open when clicking outside", a menu left behind other windows comes back as it was.
+        if (_settings.StayOpenOnClickOutside && IsVisible && !_isQa) { BringBack(); return; }
         _opening = true;
         try { OpenMenu(); }
         finally { _opening = false; }
@@ -739,7 +741,27 @@ public partial class MainWindow : Window
     // move briefly takes activation from the menu. That is not the user clicking away, so it must not hide the menu;
     // InvokeMenu activates the menu again once she is in place.
     private bool _opening;
-    private void Window_Deactivated(object sender, EventArgs e) { if (!_disposed && !_opening && !_isQa && !HasOverlay && _desktopMenu?.IsOpen != true && _session.Page != MenuPage.Settings) HideMenu(); }
+    private void Window_Deactivated(object sender, EventArgs e)
+    {
+        if (_disposed || _opening || _isQa || _desktopMenu?.IsOpen == true) return;
+        if (_settings.StayOpenOnClickOutside) { StepBack(); return; }
+        if (!HasOverlay && _session.Page != MenuPage.Settings) HideMenu();
+    }
+
+    // Clicked away with "keep open" on: stay visible, but behind the window that was clicked, her too.
+    private void StepBack()
+    {
+        if (CompanionShown) _companion!.Topmost = false;
+        HostNative.SendBehindForeground(this);
+    }
+
+    private void BringBack()
+    {
+        HostNative.BringToTop(this);
+        if (CompanionShown) { _companion!.Topmost = true; _companion.PlaceBeside(this); }
+        Activate();
+        HostNative.EnsureForeground(this);
+    }
     private void Window_Closing(object? sender, CancelEventArgs e) { if (!_disposed) { e.Cancel = true; HideMenu(); } }
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -798,7 +820,7 @@ public partial class MainWindow : Window
         menu.SetResourceReference(Control.BackgroundProperty, "PopupBrush");
         menu.SetResourceReference(Control.ForegroundProperty, "TextBrush");
         menu.SetResourceReference(Control.BorderBrushProperty, "BorderBrush");
-        menu.Closed += (_, _) => { if (!_isQa && IsVisible && !IsActive && !HasOverlay && _session.Page != MenuPage.Settings) HideMenu(); };
+        menu.Closed += (_, _) => { if (!_isQa && IsVisible && !IsActive && !HasOverlay && _session.Page != MenuPage.Settings) { if (_settings.StayOpenOnClickOutside) StepBack(); else HideMenu(); } };
         _desktopMenu = menu;
         return menu;
     }

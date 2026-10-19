@@ -58,7 +58,7 @@ XInput controllers are supported (Xbox controllers and most Windows handhelds). 
 
 The gear at the top right opens settings; the list on the left jumps to each part. Every change applies and saves at once.
 
-- **General**: the free-software notice, language (same as Windows / 简体中文 / English), the hotkey (must include Ctrl or Alt; if another program holds it, the old one is kept), the time in the greeting (name the local time and add a second time zone), start when you sign in, controller.
+- **General**: the free-software notice, language (same as Windows / 简体中文 / English), the hotkey (must include Ctrl or Alt; if another program holds it, the old one is kept), the time in the greeting (name the local time and add a second time zone), whether clicking outside hides the menu (it does by default; turned off, the menu steps behind the window you clicked and the hotkey or tray icon brings it back with your search and page kept), start when you sign in, controller.
 - **Theme**: OLED Day, OLED Night, Cream Daisy, Pearl, Deep Sea, Starry Violet or same as Windows, and a character (goes with any theme; optionally switches with the theme). Theme motion stops when Windows animations are off.
 - **Games**:
   - Reads games installed through Steam (every library), Epic, GOG, Ubisoft Connect and the Xbox app / Microsoft Store, plus EA, Battle.net, HoYoverse, WeGame and others whose game is registered with Windows; each store can be turned off.
