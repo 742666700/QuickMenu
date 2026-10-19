@@ -18,9 +18,22 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       # NSIS builds the installer (QuickMenu-Setup-<version>-x64.exe) from the small zip's files.
+      # Skipped when the runner already has it; Chocolatey is retried, then NSIS's own setup is fetched from SourceForge.
       - name: Install NSIS
         shell: pwsh
-        run: choco install nsis -y --no-progress
+        run: |
+          $installed = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe") | Where-Object { Test-Path -LiteralPath $_ }
+          if ((Get-Command makensis -ErrorAction SilentlyContinue) -or $installed) { Write-Output 'NSIS is already installed.'; exit 0 }
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            choco install nsis -y --no-progress
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Warning "choco install nsis failed (attempt $attempt, exit $LASTEXITCODE)."
+            Start-Sleep -Seconds (20 * $attempt)
+          }
+          $setup = Join-Path $env:RUNNER_TEMP 'nsis-setup.exe'
+          Invoke-WebRequest -UseBasicParsing -MaximumRetryCount 3 -RetryIntervalSec 15 -Uri 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10-setup.exe' -OutFile $setup
+          Start-Process -FilePath $setup -ArgumentList '/S' -Wait
+          if (-not (Test-Path -LiteralPath "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { throw 'NSIS could not be installed.' }
       # Tests that need a signed-in desktop (windows, tray, hotkeys) are skipped on the build machine.
       - name: Build, test and package
         shell: pwsh
