@@ -87,6 +87,8 @@ LangString RuntimeAbort ${LANG_SIMPCHINESE} "缺少 .NET 10 桌面运行时，�
 LangString RuntimeAbort ${LANG_ENGLISH} "Setup stopped: the .NET 10 Desktop Runtime is missing."
 LangString CloseApp ${LANG_SIMPCHINESE} "快捷菜单正在运行，需要先关闭它才能继续安装。$\r$\n$\r$\n点击“确定”关闭并继续。"
 LangString CloseApp ${LANG_ENGLISH} "QuickMenu is running and must be closed to continue.$\r$\n$\r$\nChoose OK to close it and continue."
+LangString RemovingOld ${LANG_SIMPCHINESE} "正在移除之前安装在别处的旧版本："
+LangString RemovingOld ${LANG_ENGLISH} "Removing an older copy installed elsewhere:"
 
 Var Downloader
 
@@ -152,6 +154,32 @@ Function CloseRunningApp
   ${EndIf}
 FunctionEnd
 
+; The program files this setup puts in its folder. Settings live elsewhere (%LOCALAPPDATA%\QuickMenu) and stay.
+!macro RemoveProgramFiles _dir
+  Delete "${_dir}\${EXE}"
+  Delete "${_dir}\LICENSE.txt"
+  Delete "${_dir}\使用说明.md"
+  Delete "${_dir}\user-guide.md"
+  RMDir /r "${_dir}\Assets"
+  ; Marker left in the folder by the 1.0 installer.
+  Delete "${_dir}\.quick-menu-install"
+!macroend
+
+; One copy per user: a copy installed earlier in another folder is removed, so only this one is left to start,
+; update or uninstall. Takes the folder on the stack; it is left alone unless QuickMenu.exe is there.
+Function RemoveCopyAt
+  Exch $R9
+  ${If} $R9 != ""
+  ${AndIf} $R9 != $INSTDIR
+  ${AndIf} ${FileExists} "$R9\${EXE}"
+    DetailPrint "$(RemovingOld) $R9"
+    !insertmacro RemoveProgramFiles $R9
+    Delete "$R9\Uninstall.exe"
+    RMDir "$R9"
+  ${EndIf}
+  Pop $R9
+FunctionEnd
+
 Section "-Runtime"
   Call EnsureRuntime
 SectionEnd
@@ -159,10 +187,28 @@ SectionEnd
 Section "$(SecApp)" SecApp
   SectionIn RO
   Call CloseRunningApp
+  ; The folder the last setup recorded and the default folder, when this install goes somewhere else; then files an
+  ; older version left here that this one no longer has.
+  ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "InstallLocation"
+  Push $0
+  Call RemoveCopyAt
+  Push "$LOCALAPPDATA\Programs\QuickMenu"
+  Call RemoveCopyAt
+  !insertmacro RemoveProgramFiles $INSTDIR
   SetOutPath "$INSTDIR"
   File /r "${SOURCE_DIR}\*.*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
+  ; Shortcuts are named in the setup's language; one left in the other language by an earlier setup goes too.
+  Delete "$SMPROGRAMS\快捷菜单.lnk"
+  Delete "$SMPROGRAMS\QuickMenu.lnk"
   CreateShortCut "$SMPROGRAMS\$(AppName).lnk" "$INSTDIR\${EXE}"
+  ; A desktop shortcut from before stays, now pointing at this copy.
+  ${If} ${FileExists} "$DESKTOP\快捷菜单.lnk"
+  ${OrIf} ${FileExists} "$DESKTOP\QuickMenu.lnk"
+    Delete "$DESKTOP\快捷菜单.lnk"
+    Delete "$DESKTOP\QuickMenu.lnk"
+    CreateShortCut "$DESKTOP\$(AppName).lnk" "$INSTDIR\${EXE}"
+  ${EndIf}
 
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "$(AppName)"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${VERSION}"
@@ -185,6 +231,8 @@ Section "$(SecApp)" SecApp
 SectionEnd
 
 Section /o "$(SecDesktop)" SecDesktop
+  Delete "$DESKTOP\快捷菜单.lnk"
+  Delete "$DESKTOP\QuickMenu.lnk"
   CreateShortCut "$DESKTOP\$(AppName).lnk" "$INSTDIR\${EXE}"
 SectionEnd
 
@@ -201,13 +249,7 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\QuickMenu.lnk"
   Delete "$DESKTOP\快捷菜单.lnk"
   Delete "$DESKTOP\QuickMenu.lnk"
-  Delete "$INSTDIR\${EXE}"
-  Delete "$INSTDIR\LICENSE.txt"
-  Delete "$INSTDIR\使用说明.md"
-  Delete "$INSTDIR\user-guide.md"
-  RMDir /r "$INSTDIR\Assets"
-  ; Marker left in this folder by the 1.0 installer.
-  Delete "$INSTDIR\.quick-menu-install"
+  !insertmacro RemoveProgramFiles $INSTDIR
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
