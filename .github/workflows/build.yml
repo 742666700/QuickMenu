@@ -27,7 +27,8 @@ jobs:
         run: ./scripts/build.ps1 -SkipInteractiveTests -Package
       # Two zips: QuickMenu-Portable-<version>-x64.zip carries its own runtime;
       # QuickMenu-Portable-<version>-x64-small.zip needs the .NET 10 Desktop Runtime.
-      # QuickMenu-Setup-<version>-x64.exe installs the small build, adding the runtime first when it is missing.
+      # QuickMenu-Setup-<version>-x64.exe installs the small build, downloading the runtime first when it is missing;
+      # QuickMenu-Setup-<version>-x64-offline.exe carries the runtime installer inside.
       - uses: actions/upload-artifact@v4
         with:
           name: QuickMenu-portable
@@ -35,6 +36,7 @@ jobs:
             artifacts/QuickMenu-Portable-*-x64.zip
             artifacts/QuickMenu-Portable-*-x64-small.zip
             artifacts/QuickMenu-Setup-*-x64.exe
+            artifacts/QuickMenu-Setup-*-x64-offline.exe
           if-no-files-found: error
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -44,5 +46,6 @@ jobs:
             artifacts/QuickMenu-Portable-*-x64.zip
             artifacts/QuickMenu-Portable-*-x64-small.zip
             artifacts/QuickMenu-Setup-*-x64.exe
+            artifacts/QuickMenu-Setup-*-x64-offline.exe
           fail_on_unmatched_files: true
           generate_release_notes: true

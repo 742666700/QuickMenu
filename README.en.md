@@ -27,9 +27,13 @@ Press one hotkey and a menu opens in the middle of the screen with everything on
 
 ## Download and use
 
-Each version on [Releases](../../releases) has an installer and two portable zips, all with the same code, features and interface.
+Each version on [Releases](../../releases) has two installers (regular and offline) and two portable zips, all with the same code, features and interface.
 
-**Recommended: the installer `QuickMenu-Setup-<version>-x64.exe` (about 25 MB).** It installs for the current user; QuickMenu itself needs no administrator rights. It checks for the .NET 10 Desktop Runtime first: if it is there, QuickMenu is installed straight away; if not, the runtime is downloaded from Microsoft and installed (this one step asks for administrator rights), then QuickMenu. Open it from the Start menu; to upgrade, run the newer installer; uninstall it from Settings → Apps, which keeps your settings in `%LOCALAPPDATA%\QuickMenu`.
+**Recommended: the installer `QuickMenu-Setup-<version>-x64.exe` (about 25 MB).** It installs for the current user; QuickMenu itself needs no administrator rights. It checks for the .NET 10 Desktop Runtime first: if it is there, QuickMenu is installed straight away; if not, the runtime is downloaded from Microsoft and installed (this one step asks for administrator rights), then QuickMenu.
+
+For a PC without internet access, or a network that blocks Microsoft downloads, take the **offline installer `QuickMenu-Setup-<version>-x64-offline.exe` (about 80 MB)**: it carries Microsoft's .NET 10 Desktop Runtime installer inside, so nothing is downloaded while installing. Otherwise it is the same.
+
+ Open it from the Start menu; to upgrade, run the newer installer; uninstall it from Settings → Apps, which keeps your settings in `%LOCALAPPDATA%\QuickMenu`.
 
 If you would rather not install anything, use a portable zip. They differ only in the .NET runtime:
 
@@ -50,7 +54,7 @@ dotnet --list-runtimes
 
 If `dotnet` is not recognised, no .NET runtime is installed. Other versions alone (.NET 8, 9 or a later 11) are not enough; the small zip needs 10.x. To install it, download ".NET Desktop Runtime 10" for x64 from the official page above, or run `winget install Microsoft.DotNet.DesktopRuntime.10`. Starting the small zip without it shows a .NET message with a download button; it never fails silently.
 
-**For AI assistants or scripts installing it for someone:** the simplest is to download and run the installer (add `/S` for a silent install); it handles the runtime itself. For a portable zip, run `dotnet --list-runtimes` first. If `Microsoft.WindowsDesktop.App 10.*` is listed, download `-x64-small.zip`; otherwise download `-x64.zip` (or, with the user's consent, install the runtime with winget and then take the small zip).
+**For AI assistants or scripts installing it for someone:** the simplest is to download and run the installer (add `/S` for a silent install; take the `-offline` one without internet); it handles the runtime itself. For a portable zip, run `dotnet --list-runtimes` first. If `Microsoft.WindowsDesktop.App 10.*` is listed, download `-x64-small.zip`; otherwise download `-x64.zip` (or, with the user's consent, install the runtime with winget and then take the small zip).
 
 Steps:
 
@@ -70,7 +74,7 @@ Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows.
 ./scripts/build.ps1                          # build and run every test
 ./scripts/build.ps1 -SkipInteractiveTests    # skip tests that need a desktop session (as CI does)
 ./scripts/build.ps1 -Package                 # also make artifacts/QuickMenu-Portable-<version>-x64.zip and -x64-small.zip,
-                                             # plus the installer QuickMenu-Setup-<version>-x64.exe when NSIS is installed (winget install NSIS.NSIS)
+                                             # plus the installers QuickMenu-Setup-<version>-x64.exe and -x64-offline.exe (with the runtime inside) when NSIS is installed (winget install NSIS.NSIS)
 dotnet run --project src/QuickMenu           # run it
 ```
 

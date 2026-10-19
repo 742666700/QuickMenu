@@ -45,8 +45,25 @@ if($Package) {
     if(-not $makensis){ $makensis=@("${env:ProgramFiles(x86)}\NSIS\makensis.exe","$env:ProgramFiles\NSIS\makensis.exe") | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1 }
     if($makensis) {
         $setup=Join-Path $workspace "artifacts\QuickMenu-Setup-$version-x64.exe"
-        & $makensis /V2 /INPUTCHARSET UTF8 "/DVERSION=$version" "/DSOURCE_DIR=$(Join-Path $workspace "artifacts\portable-$version-small")" "/DICON=$(Join-Path $workspace 'src\QuickMenu\Assets\quick-menu.ico')" "/DOUTPUT=$setup" (Join-Path $PSScriptRoot 'installer\QuickMenu.nsi')
+        $nsis=@('/V2','/INPUTCHARSET','UTF8',"/DVERSION=$version","/DSOURCE_DIR=$(Join-Path $workspace "artifacts\portable-$version-small")","/DICON=$(Join-Path $workspace 'src\QuickMenu\Assets\quick-menu.ico')")
+        & $makensis @nsis "/DOUTPUT=$setup" (Join-Path $PSScriptRoot 'installer\QuickMenu.nsi')
         if($LASTEXITCODE -ne 0){throw 'Building the installer failed.'}
+        # The offline installer carries Microsoft's newest .NET 10 Desktop Runtime installer, so nothing is downloaded while installing.
+        # A copy fetched within the last day is reused; anything that is not validly signed by Microsoft is refused.
+        $runtime=Join-Path $workspace 'artifacts\runtime-cache\windowsdesktop-runtime-win-x64.exe'
+        if(-not (Test-Path -LiteralPath $runtime) -or (Get-Item -LiteralPath $runtime).LastWriteTime -lt (Get-Date).AddDays(-1)) {
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $runtime) | Out-Null
+            Invoke-WebRequest -UseBasicParsing -Uri 'https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe' -OutFile $runtime
+        }
+        $signature=Get-AuthenticodeSignature -LiteralPath $runtime
+        $runtimeVersion=(Get-Item -LiteralPath $runtime).VersionInfo.ProductVersion
+        if($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation' -or $runtimeVersion -notlike '10.*') {
+            Remove-Item -LiteralPath $runtime -Force
+            throw "The downloaded .NET runtime installer is not a Microsoft-signed .NET 10 runtime (signature $($signature.Status), version $runtimeVersion)."
+        }
+        & $makensis @nsis "/DRUNTIME_FILE=$runtime" "/DOUTPUT=$(Join-Path $workspace "artifacts\QuickMenu-Setup-$version-x64-offline.exe")" (Join-Path $PSScriptRoot 'installer\QuickMenu.nsi')
+        if($LASTEXITCODE -ne 0){throw 'Building the offline installer failed.'}
+        Write-Output "Offline installer includes the .NET Desktop Runtime $runtimeVersion."
     }
     else { Write-Warning 'NSIS (makensis) was not found, so no installer was built. Install it with: winget install NSIS.NSIS' }
 }

@@ -1,7 +1,8 @@
 ; QuickMenu installer. Built by scripts/build.ps1 -Package from the framework-dependent (-small) publish folder:
 ;   makensis /DVERSION=2.0.5 /DSOURCE_DIR=<publish folder> /DICON=<.ico> /DOUTPUT=<setup .exe> QuickMenu.nsi
-; Installs per user (no admin). If the .NET 10 Desktop Runtime is missing it is downloaded from Microsoft and
-; installed first; that one step asks for administrator rights.
+; Installs per user (no admin). If the .NET 10 Desktop Runtime is missing it is installed first; that one step
+; asks for administrator rights. With /DRUNTIME_FILE=<Microsoft's windowsdesktop-runtime-win-x64.exe> the runtime
+; installer is carried inside (offline setup); without it the runtime is downloaded from Microsoft when needed.
 
 Unicode true
 ManifestDPIAware true
@@ -76,6 +77,8 @@ LangString RuntimeFound ${LANG_SIMPCHINESE} "已检测到 .NET 10 桌面运行�
 LangString RuntimeFound ${LANG_ENGLISH} "The .NET 10 Desktop Runtime is already installed."
 LangString RuntimeDownloading ${LANG_SIMPCHINESE} "未检测到 .NET 10 桌面运行时，正在从微软下载……"
 LangString RuntimeDownloading ${LANG_ENGLISH} "The .NET 10 Desktop Runtime is missing. Downloading it from Microsoft..."
+LangString RuntimeUnpacking ${LANG_SIMPCHINESE} "未检测到 .NET 10 桌面运行时，正在使用安装包内置的运行时……"
+LangString RuntimeUnpacking ${LANG_ENGLISH} "The .NET 10 Desktop Runtime is missing. Using the copy inside this setup..."
 LangString RuntimeInstalling ${LANG_SIMPCHINESE} "正在安装 .NET 10 桌面运行时（需要管理员权限，请在弹出的窗口中选择“是”）……"
 LangString RuntimeInstalling ${LANG_ENGLISH} "Installing the .NET 10 Desktop Runtime (needs administrator rights; choose Yes when asked)..."
 LangString RuntimeFailed ${LANG_SIMPCHINESE} "未能安装 .NET 10 桌面运行时，快捷菜单需要它才能运行。$\r$\n$\r$\n可能是网络无法连接微软服务器，或没有允许管理员权限。$\r$\n$\r$\n是否打开微软的下载页面手动安装？安装后再运行本安装程序即可。"
@@ -101,8 +104,14 @@ Function EnsureRuntime
     DetailPrint "$(RuntimeFound)"
     Return
   ${EndIf}
-  DetailPrint "$(RuntimeDownloading)"
   InitPluginsDir
+!ifdef RUNTIME_FILE
+  ; Offline setup: Microsoft's runtime installer travels inside this file.
+  DetailPrint "$(RuntimeUnpacking)"
+  SetOutPath "$PLUGINSDIR"
+  File "/oname=dotnet-desktop-runtime.exe" "${RUNTIME_FILE}"
+!else
+  DetailPrint "$(RuntimeDownloading)"
   ; curl ships with Windows 10 1803 and later; the 64-bit copy is reached through Sysnative from this 32-bit setup.
   StrCpy $Downloader "$WINDIR\Sysnative\curl.exe"
   ${IfNot} ${FileExists} $Downloader
@@ -115,6 +124,7 @@ Function EnsureRuntime
     nsExec::ExecToLog `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -UseBasicParsing -Uri '${RUNTIME_URL}' -OutFile '$PLUGINSDIR\dotnet-desktop-runtime.exe'"`
     Pop $0
   ${EndIf}
+!endif
   ${If} ${FileExists} "$PLUGINSDIR\dotnet-desktop-runtime.exe"
     DetailPrint "$(RuntimeInstalling)"
     ExecShellWait "runas" "$PLUGINSDIR\dotnet-desktop-runtime.exe" "/install /quiet /norestart" SW_SHOWNORMAL
