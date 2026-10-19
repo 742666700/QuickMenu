@@ -55,12 +55,16 @@ internal sealed class CompanionWindow : Window
         _figure.RenderTransform = _hop;
         _figure.Margin = new Thickness(0, 0, Pad, 0);
         _figure.MouseEnter += (_, _) => Hop();
+        _figure.MouseLeftButtonDown += (_, _) => Clicked?.Invoke();
         Content = new Grid { Children = { _figure, _glintLayer } };
         _glints = new AmbientScene(_glintLayer);
         _blinkTimer.Tick += (_, _) => Blink();
         _frameTimer.Tick += (_, _) => NextFrame();
         SourceInitialized += (_, _) => HostNative.MakeNonActivating(this);
     }
+
+    /// <summary>She was clicked. Her window never activates itself, so the menu decides what a click means.</summary>
+    public event Action? Clicked;
 
     public bool CanBlink => _blink.Source is not null;
     public ImageSource? Pose => _body.Source;

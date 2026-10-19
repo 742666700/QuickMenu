@@ -753,6 +753,9 @@ public partial class MainWindow : Window
     {
         if (CompanionShown) _companion!.Topmost = false;
         HostNative.SendBehindForeground(this);
+        // Deactivated can arrive before Windows has handed the foreground to the clicked window, and then there is
+        // nothing to slip behind yet; place her and the menu again once that switch has settled.
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => { if (IsVisible && !IsActive && !_disposed) HostNative.SendBehindForeground(this); }));
     }
 
     private void BringBack()
@@ -1061,7 +1064,13 @@ public partial class MainWindow : Window
         GreetingSpark.Visibility = avatar is null ? Visibility.Visible : Visibility.Hidden;
         if (character is null) { HideCompanion(); return; }
         if (_posed != character || _pose < 0) { _posed = character; _pose = _poseDice.Next(character.Poses.Count); }
-        _companion ??= new CompanionWindow();
+        if (_companion is null)
+        {
+            _companion = new CompanionWindow();
+            // Her window never takes focus, so with "keep open" a click on her while the menu waits behind another
+            // window would otherwise do nothing; it brings the menu back, like clicking the menu itself.
+            _companion.Clicked += () => { if (IsVisible && !IsActive && !_disposed) BringBack(); };
+        }
         var previousFootprint = _companion.Footprint;
         var night = _theme is QuickMenu.Models.ThemeMode.Oled or QuickMenu.Models.ThemeMode.Gemini;
         var glint = (Color)ColorConverter.ConvertFromString(_theme switch
