@@ -1,4 +1,4 @@
-<Window x:Class="QuickMenu.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:QuickMenu"
+<Window x:Class="QuickMenu.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:motion="clr-namespace:QuickMenu" xmlns:local="clr-namespace:QuickMenu"
         Title="{DynamicResource S.App.Name}" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display"
         Width="820" Height="600" MinWidth="520" MinHeight="380" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Background="Transparent"
         FontFamily="{StaticResource BodyFont}" FontSize="13"
@@ -7,8 +7,23 @@
     <Grid x:Name="RootGrid">
       <!-- Theme motion (AmbientScene) sits under everything and never takes input. Claude娘 stands in her own window (CompanionWindow). -->
       <Canvas x:Name="AmbientLayer" IsHitTestVisible="False" ClipToBounds="True"/>
-      <Grid x:Name="ContentRoot">
-        <Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
+      <!-- Subtle inner rim that defines the window edge on dark wallpapers while fading out toward the right edge where the companion overlaps. -->
+      <Border x:Name="RimFrame" CornerRadius="8" BorderThickness="1,1,0,1" BorderBrush="{DynamicResource BorderBrush}" Opacity="0.72" IsHitTestVisible="False">
+        <Border.OpacityMask>
+          <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+            <GradientStop Color="#FF000000" Offset="0"/>
+            <GradientStop Color="#FF000000" Offset="0.78"/>
+            <GradientStop Color="#00000000" Offset="0.98"/>
+          </LinearGradientBrush>
+        </Border.OpacityMask>
+      </Border>
+      <Grid x:Name="ContentRoot" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+          <TransformGroup>
+            <ScaleTransform x:Name="ContentScale" ScaleX="1" ScaleY="1"/>
+            <TranslateTransform x:Name="ContentShift" X="0" Y="0"/>
+          </TransformGroup>
+        </Grid.RenderTransform>
         <Grid.RowDefinitions><RowDefinition Height="100"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 
         <!-- Header: greeting, serif page titles, search and window actions. -->
@@ -90,7 +105,12 @@
           <Button x:Name="RefreshButton" Grid.Column="2" Content="{DynamicResource S.Tab.Refresh}" Style="{StaticResource CategoryButton}" Click="RefreshDesktop_Click" AutomationProperties.Name="{DynamicResource S.Tab.RefreshName}" ToolTip="{DynamicResource S.Tab.RefreshTip}"/>
           <Button x:Name="SortButton" Grid.Column="3" Style="{StaticResource CategoryButton}" Click="Sort_Click" AutomationProperties.Name="{DynamicResource S.Tab.SortName}" ToolTip="{DynamicResource S.Tab.SortTip}"/>
         </Grid>
-        <Popup x:Name="OfficePopup" PlacementTarget="{Binding ElementName=OfficeCategory}" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" StaysOpen="True" PopupAnimation="Fade">
+        <Popup x:Name="OfficePopup" PlacementTarget="{Binding ElementName=OfficeCategory}" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" StaysOpen="True">
+          <Popup.Style>
+            <Style TargetType="Popup">
+              <Style.Triggers><Trigger Property="motion:ControlMotion.Enabled" Value="True"><Setter Property="PopupAnimation" Value="Fade"/></Trigger></Style.Triggers>
+            </Style>
+          </Popup.Style>
           <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="6" MouseEnter="Office_MouseEnter" MouseLeave="Office_MouseLeave">
             <StackPanel x:Name="OfficeSubcategories" Orientation="Horizontal">
               <StackPanel.Resources><Style TargetType="Button" BasedOn="{StaticResource CategoryButton}"/></StackPanel.Resources>
@@ -103,6 +123,7 @@
 
         <!-- Page content. A page that runs on past the bottom fades out over its last few pixels (PageHost_ScrollChanged). -->
         <Grid x:Name="PageHost" Grid.Row="3" Margin="20,0,20,26" ScrollViewer.ScrollChanged="PageHost_ScrollChanged" SizeChanged="PageHost_SizeChanged">
+          <Grid.RenderTransform><TranslateTransform x:Name="PageShift" X="0" Y="0"/></Grid.RenderTransform>
           <ListBox x:Name="DesktopList" ItemContainerStyle="{StaticResource DesktopTile}" ItemTemplate="{StaticResource DesktopItemTemplate}" SelectionChanged="DesktopList_SelectionChanged" PreviewMouseLeftButtonDown="Reorder_MouseDown" PreviewMouseMove="Reorder_MouseMove" PreviewMouseLeftButtonUp="DesktopList_MouseLeftButtonUp" LostMouseCapture="Reorder_LostMouseCapture" PreviewMouseRightButtonDown="DesktopList_MouseRightButtonDown" AutomationProperties.Name="{DynamicResource S.List.Desktop}">
             <ListBox.GroupStyle>
               <GroupStyle HidesIfEmpty="True">
@@ -152,7 +173,7 @@
           <ScrollViewer x:Name="SettingsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly" Margin="100,0,0,0" ScrollChanged="SettingsPanel_ScrollChanged">
             <StackPanel x:Name="SettingsContent" Margin="0,0,10,16">
               <TextBlock x:Name="SectionGeneral" Text="{DynamicResource S.Settings.General}" Style="{StaticResource SettingsHeading}" Margin="6,2,0,10"/>
-              <Border Background="{DynamicResource CardBrush}" CornerRadius="16" Padding="22,4,22,4">
+              <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="22,4,22,4">
                 <StackPanel>
                   <!-- Free-software notice: the app is only ever given away, so anyone who sold it should refund. -->
                   <Grid x:Name="FreeNotice" Margin="0,16,0,16">
@@ -243,7 +264,7 @@
               </Border>
 
               <TextBlock x:Name="SectionAppearance" Text="{DynamicResource S.Settings.Appearance}" Style="{StaticResource SettingsHeading}"/>
-              <Border Background="{DynamicResource CardBrush}" CornerRadius="16" Padding="22,4,22,4">
+              <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="22,4,22,4">
                 <StackPanel>
                   <Grid Margin="0,16,0,16">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="104"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -271,7 +292,7 @@
               </Border>
 
               <TextBlock x:Name="SectionGames" Text="{DynamicResource S.Settings.Games}" Style="{StaticResource SettingsHeading}"/>
-              <Border Background="{DynamicResource CardBrush}" CornerRadius="16" Padding="22,18,22,18">
+              <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="22,18,22,18">
                 <StackPanel>
                   <TextBlock Text="{DynamicResource S.Settings.GamesIntro}" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="1,0,0,0"/>
                   <UniformGrid x:Name="GameSourcesPanel" Columns="2" Margin="0,10,0,0"/>
@@ -287,7 +308,7 @@
               </Border>
 
               <TextBlock x:Name="SectionCategories" Text="{DynamicResource S.Settings.Categories}" Style="{StaticResource SettingsHeading}"/>
-              <Border Background="{DynamicResource CardBrush}" CornerRadius="16" Padding="22,18,22,18">
+              <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="22,18,22,18">
                 <StackPanel>
                   <TextBlock Text="{DynamicResource S.Settings.CategoriesIntro}" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="1,0,0,0" TextWrapping="Wrap"/>
                   <StackPanel x:Name="CategoryRows" Margin="0,12,0,0"/>
@@ -296,7 +317,7 @@
               </Border>
 
               <TextBlock x:Name="SectionAbout" Text="{DynamicResource S.Settings.About}" Style="{StaticResource SettingsHeading}"/>
-              <Border Background="{DynamicResource CardBrush}" CornerRadius="16" Padding="22,18,22,18">
+              <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="22,18,22,18">
                 <StackPanel>
                   <StackPanel Orientation="Horizontal">
                     <Control Style="{StaticResource Spark}" Width="13" Height="13"/>
@@ -317,7 +338,9 @@
           </ScrollViewer>
         </Grid>
 
-        <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="{DynamicResource MutedBrush}" FontSize="11.5" Margin="34,-14,25,14" TextWrapping="Wrap"/>
+        <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="{DynamicResource MutedBrush}" FontSize="11.5" Margin="34,-14,25,14" TextWrapping="Wrap">
+          <TextBlock.RenderTransform><TranslateTransform x:Name="StatusShift" Y="0"/></TextBlock.RenderTransform>
+        </TextBlock>
 
       </Grid>
 

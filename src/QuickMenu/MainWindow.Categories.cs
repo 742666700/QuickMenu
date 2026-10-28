@@ -77,10 +77,12 @@ public partial class MainWindow
 
     internal void SelectCustomCategory(string id)
     {
+        var changed = _session.CustomCategory != id;
         _session.DesktopCategory = DesktopCategory.All;
         _session.CustomCategory = id;
         _session.Selections[MenuPage.Desktop] = 0;
         _desktopView.Refresh(); UpdateCategoryButtons(); RestoreSelection(); UpdateEmptyState();
+        if (changed) PlayCategoryTransition();
     }
 
     private string CategoryMenuLabel() => _session.CustomCategory is { } id

@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Media.Animation;
 using QuickMenu.Models;
 using QuickMenu.Services;
 
@@ -20,7 +22,12 @@ public partial class MainWindow
     internal static string AppVersion => Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "";
     private static readonly IReadOnlyList<TimeZoneInfo> TimeZones = TimeZoneInfo.GetSystemTimeZones();
     private static readonly Dictionary<string, TimeZoneInfo?> ZoneCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly DependencyProperty SettingsScrollOffsetProperty = DependencyProperty.Register(
+        nameof(SettingsScrollOffset), typeof(double), typeof(MainWindow),
+        new PropertyMetadata(0.0, (d, e) => ((MainWindow)d).SettingsPanel.ScrollToVerticalOffset((double)e.NewValue)));
+    private double SettingsScrollOffset { get => (double)GetValue(SettingsScrollOffsetProperty); set => SetValue(SettingsScrollOffsetProperty, value); }
     private bool _welcome;
+    private int _settingsScrollGeneration;
 
     private void InitializeSettingsPage()
     {
@@ -31,6 +38,12 @@ public partial class MainWindow
         ProjectLink.Tag = ProjectUrl;
         ContactLinkText.Text = ContactEmail;
         ContactLink.Tag = "mailto:" + ContactEmail;
+        SettingsPanel.PreviewMouseWheel += (_, _) => CancelSettingsScroll();
+        SettingsPanel.PreviewMouseDown += (_, _) => CancelSettingsScroll();
+        SettingsPanel.PreviewKeyDown += (_, _) => CancelSettingsScroll();
+        SettingsPanel.PreviewTouchDown += (_, _) => CancelSettingsScroll();
+        SettingsPanel.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => CancelSettingsScroll()), true);
+        SettingsPanel.IsVisibleChanged += (_, _) => { if (!SettingsPanel.IsVisible) CancelSettingsScroll(); };
         ThemePicker.SelectionChanged += (_, _) => { FollowTheme(); CommitSettings(); };
         CharacterPicker.SelectionChanged += (_, _) => CommitSettings();
         FollowThemeCheck.Click += (_, _) => { FollowTheme(); CommitSettings(); };
@@ -68,6 +81,7 @@ public partial class MainWindow
         UpdateClockOptions();
         RenderGameLibrary();
         RenderCategorySettings();
+        CancelSettingsScroll();
         SettingsPanel.ScrollToTop();
         UpdateSectionButtons();
     }
@@ -202,9 +216,39 @@ public partial class MainWindow
     {
         if (FindName(name) is not FrameworkElement section) return;
         SettingsPanel.UpdateLayout();
-        SettingsPanel.ScrollToVerticalOffset(Math.Max(0, section.TranslatePoint(new Point(), SettingsContent).Y - 2));
-        SettingsPanel.UpdateLayout();
-        UpdateSectionButtons();
+        var target = Math.Clamp(section.TranslatePoint(new Point(), SettingsContent).Y - 2, 0, SettingsPanel.ScrollableHeight);
+        CancelSettingsScroll();
+        if (!AnimationsEnabled || !IsVisible)
+        {
+            SettingsPanel.ScrollToVerticalOffset(target);
+            SettingsPanel.UpdateLayout();
+            UpdateSectionButtons();
+            return;
+        }
+        var from = SettingsPanel.VerticalOffset;
+        if (Math.Abs(target - from) < 1) { UpdateSectionButtons(); return; }
+        var glide = new DoubleAnimation(from, target, TimeSpan.FromMilliseconds(200))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        var generation = _settingsScrollGeneration;
+        glide.Completed += (_, _) =>
+        {
+            if (generation != _settingsScrollGeneration) return;
+            SettingsScrollOffset = target;
+            BeginAnimation(SettingsScrollOffsetProperty, null);
+            SettingsPanel.ScrollToVerticalOffset(target);
+            UpdateSectionButtons();
+        };
+        BeginAnimation(SettingsScrollOffsetProperty, glide);
+    }
+
+    private void CancelSettingsScroll()
+    {
+        // Removing a clock exposes its base value; keep the current offset so taking over never jumps to zero.
+        _settingsScrollGeneration++;
+        SettingsScrollOffset = SettingsPanel.VerticalOffset;
+        BeginAnimation(SettingsScrollOffsetProperty, null);
     }
 
     private void SettingsPanel_ScrollChanged(object sender, ScrollChangedEventArgs e) => UpdateSectionButtons();

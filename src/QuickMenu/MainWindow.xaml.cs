@@ -65,6 +65,7 @@ public partial class MainWindow : Window
     public MainWindow(bool isQa = false)
     {
         _isQa = isQa;
+        ControlMotion.SetEnabled(this, AnimationsEnabled);
         _settingsService = new SettingsService(manageStartup: !isQa);
         _settings = _settingsService.Load();
         _desktopPreferences = new DesktopPreferencesService(ephemeral: isQa);
@@ -102,6 +103,12 @@ public partial class MainWindow : Window
         SetPage(MenuPage.Desktop);
         SizeChanged += (_, e) => { UpdateColumns(); if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 40 || Math.Abs(e.NewSize.Height - e.PreviousSize.Height) > 40) RebuildAmbient(); };
         Loaded += (_, _) => UpdateColumns();
+        IsVisibleChanged += (_, _) => { if (!IsVisible) StopUiMotion(); };
+        if (!isQa)
+        {
+            SystemParameters.StaticPropertyChanged += MotionPreferenceChanged;
+            RenderCapability.TierChanged += RenderingTierChanged;
+        }
     }
 
     private static bool Matches(string source, string query) => string.IsNullOrWhiteSpace(query) || CultureInfo.CurrentCulture.CompareInfo.IndexOf(source, query.Trim(), CompareOptions.IgnoreCase) >= 0;
@@ -258,6 +265,7 @@ public partial class MainWindow : Window
     private void SetPage(MenuPage page)
     {
         if (Overlay is null) return;
+        var previous = _session.Page;
         OfficePopup.IsOpen = false;
         _session.Navigate(page);
         DesktopList.Visibility = page == MenuPage.Desktop ? Visibility.Visible : Visibility.Collapsed;
@@ -289,6 +297,7 @@ public partial class MainWindow : Window
         if (_appsFilter != appsQuery) { _appsFilter = appsQuery; _appsView?.Refresh(); }
         RestoreSelection();
         UpdateEmptyState();
+        if (IsVisible && !_opening && previous != page) PlayPageTransition(previous, page);
         if (page == MenuPage.RunningApps) _ = RefreshAppsAsync();
     }
 
@@ -488,25 +497,112 @@ public partial class MainWindow : Window
     }
 
     // Motion is skipped in preview captures and when Windows animations are turned off.
-    private bool AnimationsEnabled => !_isQa && SystemParameters.ClientAreaAnimation && RenderCapability.Tier > 0;
+    private bool _previewAnimations;
+    private bool AnimationsEnabled => _isQa ? _previewAnimations : SystemParameters.ClientAreaAnimation && RenderCapability.Tier > 0;
+
+    internal void PreviewAnimations(bool enabled)
+    {
+        if (!_isQa) throw new InvalidOperationException("Only self-check windows can override motion preferences.");
+        _previewAnimations = enabled;
+        ControlMotion.SetEnabled(this, enabled);
+        if (!enabled) { StopUiMotion(); _ambient.Stop(); _companion?.StopMotion(); }
+    }
+
+    internal void PreviewStatus(string message) => SetStatus(message);
+
+    private Reorder? _previewReorder;
+    internal void PreviewReorderFeedback(DesktopItem item, bool active)
+    {
+        if (active) { _previewReorder = new Reorder(DesktopList, item, default); SetReorderFade(_previewReorder, 0.45); }
+        else if (_previewReorder is { } drag) { SetReorderFade(drag, 1); _previewReorder = null; }
+    }
+
+    private void MotionPreferenceChanged(object? sender, PropertyChangedEventArgs e) => RefreshMotionPolicy();
+    private void RenderingTierChanged(object? sender, EventArgs e) => RefreshMotionPolicy();
+    private void RefreshMotionPolicy() => Dispatcher.BeginInvoke(() =>
+    {
+        if (_disposed) return;
+        ControlMotion.SetEnabled(this, AnimationsEnabled);
+        if (!AnimationsEnabled) { StopUiMotion(); _ambient.Stop(); _companion?.StopMotion(); }
+        else if (IsVisible) { _ambient.Start(); ShowCompanion(); }
+    });
+
+    private void StopUiMotion()
+    {
+        CancelSettingsScroll();
+        foreach (var element in new UIElement[] { RootGrid, ContentRoot, PageHost, DesktopList, Overlay, StatusText })
+            element.BeginAnimation(OpacityProperty, null);
+        ContentScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        ContentScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        ContentShift.BeginAnimation(TranslateTransform.YProperty, null);
+        PageShift.BeginAnimation(TranslateTransform.XProperty, null);
+        PageShift.BeginAnimation(TranslateTransform.YProperty, null);
+        StatusShift.BeginAnimation(TranslateTransform.YProperty, null);
+        foreach (var panel in new[] { DialogBorder, CategoryEditor })
+        {
+            var scale = (ScaleTransform)panel.RenderTransform;
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        }
+    }
 
     private void PlayEntrance()
     {
-        var shift = (TranslateTransform)ContentRoot.RenderTransform;
-        if (!AnimationsEnabled) { ContentRoot.BeginAnimation(OpacityProperty, null); shift.BeginAnimation(TranslateTransform.YProperty, null); return; }
-        var duration = TimeSpan.FromMilliseconds(120);
+        if (!AnimationsEnabled)
+        {
+            ContentRoot.BeginAnimation(OpacityProperty, null);
+            ContentScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            ContentScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            ContentShift.BeginAnimation(TranslateTransform.YProperty, null);
+            PageShift.BeginAnimation(TranslateTransform.YProperty, null);
+            return;
+        }
+        var duration = TimeSpan.FromMilliseconds(160);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        ContentRoot.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
-        shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(6, 0, duration) { EasingFunction = ease });
+        var grow = new DoubleAnimation(0.985, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop };
+        ContentRoot.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+        ContentScale.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+        ContentScale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+        ContentShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(8, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+        PageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(6, 0, TimeSpan.FromMilliseconds(190)) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+    }
+
+    private void PlayPageTransition(MenuPage previous, MenuPage next)
+    {
+        if (!AnimationsEnabled || !IsVisible)
+        {
+            PageHost.BeginAnimation(OpacityProperty, null);
+            PageShift.BeginAnimation(TranslateTransform.XProperty, null);
+            return;
+        }
+        var direction = next > previous ? 1.0 : -1.0;
+        var duration = TimeSpan.FromMilliseconds(140);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        PageHost.BeginAnimation(OpacityProperty, new DoubleAnimation(0.25, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+        PageShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(direction * 10, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+    }
+
+    internal void PlayCategoryTransition()
+    {
+        if (!AnimationsEnabled || !IsVisible || _session.Page != MenuPage.Desktop)
+        {
+            DesktopList.BeginAnimation(OpacityProperty, null);
+            PageShift.BeginAnimation(TranslateTransform.YProperty, null);
+            return;
+        }
+        var duration = TimeSpan.FromMilliseconds(110);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        DesktopList.BeginAnimation(OpacityProperty, new DoubleAnimation(0.35, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+        PageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(4, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
     }
 
     private void PlayDialogEntrance(Border panel)
     {
         var scale = (ScaleTransform)panel.RenderTransform;
         if (!AnimationsEnabled) { Overlay.BeginAnimation(OpacityProperty, null); scale.BeginAnimation(ScaleTransform.ScaleXProperty, null); scale.BeginAnimation(ScaleTransform.ScaleYProperty, null); return; }
-        var duration = TimeSpan.FromMilliseconds(140);
-        var grow = new DoubleAnimation(0.97, 1, duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
-        Overlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration));
+        var duration = TimeSpan.FromMilliseconds(160);
+        var grow = new DoubleAnimation(0.94, 1, duration) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.2 }, FillBehavior = FillBehavior.Stop };
+        Overlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140)) { FillBehavior = FillBehavior.Stop });
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
         scale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
     }
@@ -517,6 +613,13 @@ public partial class MainWindow : Window
     private void CloseOverlay()
     {
         if (Overlay is null) return;
+        Overlay.BeginAnimation(OpacityProperty, null);
+        foreach (var panel in new[] { DialogBorder, CategoryEditor })
+        {
+            var scale = (ScaleTransform)panel.RenderTransform;
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        }
         Overlay.Visibility = Visibility.Collapsed;
         DesktopNav.IsEnabled = AppsNav.IsEnabled = SettingsNav.IsEnabled = SearchHost.IsEnabled = DesktopList.IsEnabled = AppsList.IsEnabled = SettingsPanel.IsEnabled = true;
         _pendingApp = null; _pendingProcesses = null; _editingBuiltIn = null; _editingCategory = null;
@@ -727,6 +830,8 @@ public partial class MainWindow : Window
         _theme = mode;
         ApplyCompanion();
         RebuildAmbient();
+        if (IsVisible && AnimationsEnabled)
+            RootGrid.BeginAnimation(OpacityProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(140)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
         AppearanceChanged?.Invoke(dark);
     }
 
@@ -736,7 +841,21 @@ public partial class MainWindow : Window
     }
 
     private void HideMenu() { if (_gamepad != null) _gamepad.Navigating = false; _ambient.Stop(); HideCompanion(); CancelReorder(); if (_desktopMenu != null) _desktopMenu.IsOpen = false; OfficePopup.IsOpen = false; CloseOverlay(); _refreshTimer.Stop(); _invocation?.Cancel(); Hide(); }
-    private void SetStatus(string message) { if (StatusText is not null) { StatusText.Text = message; StatusText.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible; } }
+    private void SetStatus(string message)
+    {
+        if (StatusText is null) return;
+        StatusText.BeginAnimation(OpacityProperty, null);
+        StatusShift.BeginAnimation(TranslateTransform.YProperty, null);
+        StatusText.Text = message;
+        StatusText.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        if (AnimationsEnabled && IsVisible && message.Length > 0)
+        {
+            var duration = TimeSpan.FromMilliseconds(140);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            StatusText.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+            StatusShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(3, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+        }
+    }
     // Opening on a screen with another scale moves her window across it too, and WPF's DPI handling for that
     // move briefly takes activation from the menu. That is not the user clicking away, so it must not hide the menu;
     // InvokeMenu activates the menu again once she is in place.
@@ -794,10 +913,12 @@ public partial class MainWindow : Window
     }
     internal void SelectCategory(DesktopCategory category)
     {
+        var changed = _session.DesktopCategory != category || _session.CustomCategory != null;
         _session.DesktopCategory = category;
         _session.CustomCategory = null;
         _session.Selections[MenuPage.Desktop] = 0;
         _desktopView.Refresh(); UpdateCategoryButtons(); RestoreSelection(); UpdateEmptyState();
+        if (changed) PlayCategoryTransition();
     }
     private void UpdateCategoryButtons()
     {
@@ -820,6 +941,7 @@ public partial class MainWindow : Window
         if (_desktopMenu != null) _desktopMenu.IsOpen = false;
         OfficePopup.IsOpen = false;
         var menu = new ContextMenu { PlacementTarget = target, Placement = PlacementMode.Bottom };
+        menu.SetBinding(ControlMotion.EnabledProperty, new Binding { Source = this, Path = new PropertyPath(ControlMotion.EnabledProperty) });
         menu.SetResourceReference(Control.BackgroundProperty, "PopupBrush");
         menu.SetResourceReference(Control.ForegroundProperty, "TextBrush");
         menu.SetResourceReference(Control.BorderBrushProperty, "BorderBrush");
@@ -918,6 +1040,8 @@ public partial class MainWindow : Window
     {
         _disposed = true;
         SystemEvents.UserPreferenceChanged -= SystemThemeChanged;
+        SystemParameters.StaticPropertyChanged -= MotionPreferenceChanged;
+        RenderCapability.TierChanged -= RenderingTierChanged;
         Loc.Changed -= OnLanguageChanged;
         _gamepad?.Dispose(); _gamepad = null;
         _refreshTimer.Stop(); _invocation?.Cancel(); _invocation?.Dispose(); _invocation = null; _hotkeys?.Dispose();
@@ -1069,7 +1193,12 @@ public partial class MainWindow : Window
             _companion = new CompanionWindow();
             // Her window never takes focus, so with "keep open" a click on her while the menu waits behind another
             // window would otherwise do nothing; it brings the menu back, like clicking the menu itself.
-            _companion.Clicked += () => { if (IsVisible && !IsActive && !_disposed) BringBack(); };
+            _companion.Clicked += () =>
+            {
+                if (_disposed || !IsVisible) return;
+                if (!IsActive) BringBack();
+                else if (AnimationsEnabled) _companion.PlayClickReaction();
+            };
         }
         var previousFootprint = _companion.Footprint;
         var night = _theme is QuickMenu.Models.ThemeMode.Oled or QuickMenu.Models.ThemeMode.Gemini;
@@ -1093,8 +1222,8 @@ public partial class MainWindow : Window
         _companion.PlaceBeside(this);
         var appearing = !_companion.IsVisible;
         _companion.Show();
-        if (!AnimationsEnabled) return;
-        if (appearing) _companion.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
+        if (!AnimationsEnabled) { _companion.StopMotion(); return; }
+        if (appearing) _companion.PlayEntrance();
         _companion.StartMotion();
     }
 
@@ -1125,6 +1254,7 @@ public partial class MainWindow : Window
         public List<string> Order { get; set; } = new();
         public List<string> Original { get; set; } = new();
         public System.Collections.IComparer? Saved { get; set; }
+        public Dictionary<UIElement, (double Opacity, Transform Transform, Point Origin)> Visuals { get; } = new();
         public int Compare(DesktopItem a, DesktopItem b)
         {
             var result = b.IsPinned.CompareTo(a.IsPinned);
@@ -1220,8 +1350,27 @@ public partial class MainWindow : Window
     private void SetReorderFade(Reorder drag, double opacity)
     {
         var item = _desktop.FirstOrDefault(entry => entry.Id == drag.Item.Id) ?? drag.Item;
-        if (DesktopList.ItemContainerGenerator.ContainerFromItem(item) is UIElement tile) tile.Opacity = opacity;
-        if (PinnedItems.ItemContainerGenerator.ContainerFromItem(item) is UIElement pin) pin.Opacity = opacity;
+        if (opacity >= 1)
+        {
+            foreach (var (container, saved) in drag.Visuals)
+            {
+                container.SetCurrentValue(OpacityProperty, saved.Opacity);
+                container.SetCurrentValue(RenderTransformProperty, saved.Transform);
+                container.SetCurrentValue(RenderTransformOriginProperty, saved.Origin);
+            }
+            drag.Visuals.Clear();
+            return;
+        }
+        foreach (var host in new ItemsControl[] { DesktopList, PinnedItems })
+            if (host.ItemContainerGenerator.ContainerFromItem(item) is UIElement container && !drag.Visuals.ContainsKey(container))
+            {
+                // Hover/press feedback lives inside the templates. Keep the container's own transform intact too.
+                drag.Visuals.Add(container, (container.Opacity, container.RenderTransform, container.RenderTransformOrigin));
+                container.SetCurrentValue(OpacityProperty, opacity);
+                if (!AnimationsEnabled) continue;
+                container.SetCurrentValue(RenderTransformOriginProperty, new Point(0.5, 0.5));
+                container.SetCurrentValue(RenderTransformProperty, new TransformGroup { Children = { container.RenderTransform, new ScaleTransform(1.03, 1.03) } });
+            }
     }
 
     private void EndReorder(Reorder drag)

@@ -22,6 +22,7 @@ internal sealed class CompanionWindow : Window
 
     private readonly Grid _figure = new() { VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, Background = Brushes.Transparent };
     private readonly Image _body = new() { Stretch = Stretch.Uniform };
+    private readonly Image _fadeBody = new() { Stretch = Stretch.Uniform, Opacity = 0, IsHitTestVisible = false };
     private readonly Image _blink = new() { Stretch = Stretch.Uniform, Opacity = 0 };
     private readonly Canvas _glintLayer = new() { IsHitTestVisible = false };
     private readonly AmbientScene _glints;
@@ -33,7 +34,10 @@ internal sealed class CompanionWindow : Window
     private IReadOnlyList<(BitmapSource Frame, TimeSpan Hold)>? _frames;
     private int _frame;
     private readonly Random _random = new();
+    private DateTime _lastHopUtc;
     private bool _animated;
+    private bool _blinking;
+    private CancellationTokenSource? _blinkCancellation;
     private CharacterPose? _pose;
     private double _figureWidth, _figureHeight, _scale = 1;
     private (Color Color, byte Halo, int Count, Geometry? Shape) _glint;
@@ -49,8 +53,10 @@ internal sealed class CompanionWindow : Window
         Topmost = true;
         Focusable = false;
         RenderOptions.SetBitmapScalingMode(_body, BitmapScalingMode.HighQuality);
+        RenderOptions.SetBitmapScalingMode(_fadeBody, BitmapScalingMode.HighQuality);
         RenderOptions.SetBitmapScalingMode(_blink, BitmapScalingMode.HighQuality);
         _figure.Children.Add(_body);
+        _figure.Children.Add(_fadeBody);
         _figure.Children.Add(_blink);
         _figure.RenderTransform = _hop;
         _figure.Margin = new Thickness(0, 0, Pad, 0);
@@ -69,6 +75,8 @@ internal sealed class CompanionWindow : Window
     public bool CanBlink => _blink.Source is not null;
     public ImageSource? Pose => _body.Source;
     public bool IsAnimating => _animated && _glints.IsRunning;
+    internal bool HasMotion => _animated || _glints.IsRunning || _blinkTimer.IsEnabled || _frameTimer.IsEnabled
+        || HasAnimatedProperties || _hop.HasAnimatedProperties || _fadeBody.HasAnimatedProperties;
 
     /// <summary>The space she takes beyond the menu at full size: width right of its edge, height above its bottom.</summary>
     public Size Footprint => _pose is null ? default : new(_figureWidth + Pad - Overlap, _figureHeight + Pad - FeetDrop);
@@ -113,6 +121,32 @@ internal sealed class CompanionWindow : Window
 
     public void PlaceBeside(Window menu) => HostNative.PlaceAtRightEdge(this, menu, Overlap, FeetDrop);
 
+    /// <summary>Gentle slide-and-fade entrance when she first appears beside the menu.</summary>
+    public void PlayEntrance()
+    {
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+        _hop.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+        _hop.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(6, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+    }
+
+    /// <summary>Cheerful double-hop and blink when clicked while the menu is active.</summary>
+    public void PlayClickReaction()
+    {
+        if (!_animated) return;
+        _lastHopUtc = DateTime.UtcNow;
+        var bounce = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromMilliseconds(360), FillBehavior = FillBehavior.Stop };
+        var outEase = new KeySpline(0.25, 0.8, 0.4, 1);
+        var inEase = new KeySpline(0.5, 0, 0.85, 0.6);
+        bounce.KeyFrames.Add(new SplineDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        bounce.KeyFrames.Add(new SplineDoubleKeyFrame(-11, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(100)), outEase));
+        bounce.KeyFrames.Add(new SplineDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(195)), inEase));
+        bounce.KeyFrames.Add(new SplineDoubleKeyFrame(-5.5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(275)), outEase));
+        bounce.KeyFrames.Add(new SplineDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(360)), inEase));
+        _hop.BeginAnimation(TranslateTransform.YProperty, bounce);
+        if (CanBlink) Blink();
+    }
+
     /// <summary>
     /// Blinking, the glints and the hop. She does not breathe or float continuously: her window is see-through,
     /// and WPF repaints such windows in software, so a figure that never stops moving costs a few percent of a
@@ -122,6 +156,7 @@ internal sealed class CompanionWindow : Window
     {
         if (_animated) return;
         _animated = true;
+        _blinkCancellation = new CancellationTokenSource();
         _blinkTimer.Interval = TimeSpan.FromSeconds(3 + _random.NextDouble() * 4);
         if (CanBlink) _blinkTimer.Start();
         if (_frames is not null) { _frameTimer.Interval = _frames[0].Hold; _frameTimer.Start(); }
@@ -133,15 +168,32 @@ internal sealed class CompanionWindow : Window
     private void NextFrame()
     {
         if (_frames is null) { _frameTimer.Stop(); return; }
+        var previous = _body.Source;
         _frame = (_frame + 1) % _frames.Count;
         _body.Source = _frames[_frame].Frame;
         _frameTimer.Interval = _frames[_frame].Hold;
+        if (_animated && previous is not null && !ReferenceEquals(previous, _body.Source))
+        {
+            _fadeBody.Source = previous;
+            var crossFade = new DoubleAnimation(0.85, 0, TimeSpan.FromMilliseconds(90)) { FillBehavior = FillBehavior.Stop };
+            crossFade.Completed += (_, _) => _fadeBody.Source = null;
+            _fadeBody.BeginAnimation(OpacityProperty, crossFade);
+        }
     }
 
     public void StopMotion()
     {
         _animated = false;
+        _blinkCancellation?.Cancel();
+        _blinkCancellation?.Dispose();
+        _blinkCancellation = null;
+        _blinking = false;
+        BeginAnimation(OpacityProperty, null);
+        _hop.BeginAnimation(TranslateTransform.XProperty, null);
         _hop.BeginAnimation(TranslateTransform.YProperty, null);
+        _fadeBody.BeginAnimation(OpacityProperty, null);
+        _fadeBody.Opacity = 0;
+        _fadeBody.Source = null;
         _blinkTimer.Stop();
         _blink.Opacity = 0;
         _frameTimer.Stop();
@@ -152,21 +204,31 @@ internal sealed class CompanionWindow : Window
 
     private async void Blink()
     {
+        if (!_animated || _blinking || _blinkCancellation is not { } cancellation) return;
+        _blinking = true;
+        var token = cancellation.Token;
         _blinkTimer.Interval = TimeSpan.FromSeconds(3 + _random.NextDouble() * 4);
         var times = _random.NextDouble() < 0.2 ? 2 : 1;
-        for (var i = 0; i < times && _animated; i++)
+        try
         {
-            _blink.Opacity = 1;
-            await Task.Delay(120);
-            _blink.Opacity = 0;
-            if (i + 1 < times) await Task.Delay(160);
+            for (var i = 0; i < times; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                _blink.Opacity = 1;
+                await Task.Delay(120, token);
+                _blink.Opacity = 0;
+                if (i + 1 < times) await Task.Delay(160, token);
+            }
         }
+        catch (OperationCanceledException) { }
+        finally { if (ReferenceEquals(_blinkCancellation, cancellation)) { _blink.Opacity = 0; _blinking = false; } }
     }
 
-    // Pointing at her gets a small, happy hop.
+    // Pointing at her gets a small, happy hop, debounced so brushing across the edge does not jitter.
     private void Hop()
     {
-        if (!_animated) return;
-        _hop.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, -10, TimeSpan.FromMilliseconds(170)) { AutoReverse = true, EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+        if (!_animated || (DateTime.UtcNow - _lastHopUtc).TotalMilliseconds < 280) return;
+        _lastHopUtc = DateTime.UtcNow;
+        _hop.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, -10, TimeSpan.FromMilliseconds(170)) { AutoReverse = true, FillBehavior = FillBehavior.Stop, EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
     }
 }

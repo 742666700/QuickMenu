@@ -11,7 +11,7 @@ using ThemeMode = QuickMenu.Models.ThemeMode;
 
 namespace QuickMenu;
 
-internal static class Diagnostics
+internal static partial class Diagnostics
 {
     internal static async Task ObserveLifecycleAsync(MainWindow window, Func<bool> trayVisible, string[] args)
     {
@@ -534,6 +534,7 @@ internal static class Diagnostics
         window.PreviewPage(MenuPage.Desktop);
         checks["switching back to Chinese restores the interface"] = window.SearchPlaceholder.Text == "搜索桌面" && (string)window.DesktopNav.Content == "桌面";
         window.ApplyTheme(ThemeMode.Oled);
+        await InspectMotion(window, checks, output, items);
         var timings = new List<double>();
         for (var i = 0; i < 8; i++)
         {

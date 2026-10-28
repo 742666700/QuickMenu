@@ -1,4 +1,4 @@
-<Application x:Class="QuickMenu.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" ShutdownMode="OnExplicitShutdown">
+<Application x:Class="QuickMenu.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:motion="clr-namespace:QuickMenu" ShutdownMode="OnExplicitShutdown">
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
@@ -6,33 +6,58 @@
         <ResourceDictionary Source="Themes/Controls.xaml"/>
       </ResourceDictionary.MergedDictionaries>
 
-      <!-- Desktop row: soft hover wash, clay bar and tint when selected. -->
+      <!-- Desktop row: soft hover wash, rounded icon plate with hover lift, clay bar and tint when selected. -->
       <DataTemplate x:Key="DesktopItemTemplate">
         <Grid x:Name="DesktopRow" Background="Transparent" ToolTip="{Binding Name}">
-          <Border x:Name="Hover" Background="{DynamicResource HoverBrush}" CornerRadius="10" Opacity="0"/>
+          <Border x:Name="Hover" Background="{DynamicResource HoverBrush}" CornerRadius="10" Opacity="0">
+            <motion:ControlMotion.Opacity><DoubleAnimation To="0" Duration="0:0:0.15"/></motion:ControlMotion.Opacity></Border>
           <Border x:Name="Selected" Background="{DynamicResource SelectedBrush}" CornerRadius="10" Visibility="Collapsed"/>
-          <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" Margin="0,18" CornerRadius="1.5" Background="{DynamicResource AccentBrush}" Visibility="Collapsed"/>
+          <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" Margin="0,18" CornerRadius="1.5" Background="{DynamicResource AccentBrush}" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5">
+            <Border.RenderTransform><ScaleTransform x:Name="BarScale" ScaleY="1"/></Border.RenderTransform>
+          </Border>
           <Grid Margin="12,11,10,11">
             <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/></Grid.ColumnDefinitions>
-            <Grid Width="44" Height="44">
-              <TextBlock Text="&#xE8A5;" Style="{StaticResource MissingIconGlyph}" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center"/>
-              <Image Source="{Binding Icon}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
-            </Grid>
+            <Border x:Name="IconPlate" Width="44" Height="44" Background="{DynamicResource IconPlateBrush}" BorderBrush="{DynamicResource IconEdgeBrush}" BorderThickness="1" CornerRadius="11" Padding="4" RenderTransformOrigin="0.5,0.5">
+            <motion:ControlMotion.Y><DoubleAnimation To="0" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></motion:ControlMotion.Y>
+            <motion:ControlMotion.ScaleY><DoubleAnimation To="1" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></motion:ControlMotion.ScaleY>
+            <motion:ControlMotion.ScaleX><DoubleAnimation To="1" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></motion:ControlMotion.ScaleX>
+              <Border.RenderTransform>
+                <TransformGroup>
+                  <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
+                  <TranslateTransform x:Name="IconLift" Y="0"/>
+                </TransformGroup>
+              </Border.RenderTransform>
+              <Grid>
+                <TextBlock Text="&#xE8A5;" Style="{StaticResource MissingIconGlyph}" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center"/>
+                <Image Source="{Binding Icon}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+              </Grid>
+            </Border>
             <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
               <TextBlock Text="{Binding Name}" FontSize="15" TextTrimming="CharacterEllipsis"/>
               <TextBlock Text="{Binding DisplayType}" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
-            <TextBlock x:Name="PinBadge" Grid.Column="2" Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource AccentBrush}" Opacity="0.85" Visibility="Collapsed" VerticalAlignment="Center"/>
+            <TextBlock x:Name="PinBadge" Grid.Column="2" Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource AccentBrush}" Opacity="0.85" Visibility="Collapsed" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+              <TextBlock.RenderTransform><ScaleTransform x:Name="PinScale" ScaleX="1" ScaleY="1"/></TextBlock.RenderTransform>
+            </TextBlock>
           </Grid>
         </Grid>
         <DataTemplate.Triggers>
-          <DataTrigger Binding="{Binding IsPinned}" Value="True"><Setter TargetName="PinBadge" Property="Visibility" Value="Visible"/></DataTrigger>
+          <DataTrigger Binding="{Binding IsPinned}" Value="True">
+            <Setter TargetName="PinBadge" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="PinBadge" Property="motion:ControlMotion.ScaleX"><Setter.Value><DoubleAnimation From="0.4" To="1" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+              <Setter TargetName="PinBadge" Property="motion:ControlMotion.ScaleY"><Setter.Value><DoubleAnimation From="0.4" To="1" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+          </DataTrigger>
           <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
-            <DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.1"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions>
-            <DataTrigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15"/></Storyboard></BeginStoryboard></DataTrigger.ExitActions>
+            <Setter TargetName="Hover" Property="motion:ControlMotion.Opacity"><Setter.Value><DoubleAnimation To="1" Duration="0:0:0.1"/></Setter.Value></Setter>
+              <Setter TargetName="IconPlate" Property="motion:ControlMotion.ScaleX"><Setter.Value><DoubleAnimation To="1.06" Duration="0:0:0.14"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+              <Setter TargetName="IconPlate" Property="motion:ControlMotion.ScaleY"><Setter.Value><DoubleAnimation To="1.06" Duration="0:0:0.14"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+              <Setter TargetName="IconPlate" Property="motion:ControlMotion.Y"><Setter.Value><DoubleAnimation To="-1.5" Duration="0:0:0.14"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+
           </DataTrigger>
           <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
-            <Setter TargetName="Selected" Property="Visibility" Value="Visible"/><Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="Selected" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="Bar" Property="motion:ControlMotion.ScaleY"><Setter.Value><DoubleAnimation From="0.2" To="1" Duration="0:0:0.15"><DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.35"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
           </DataTrigger>
         </DataTemplate.Triggers>
       </DataTemplate>
@@ -41,7 +66,16 @@
       <DataTemplate x:Key="AppRowTemplate">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <Border Width="40" Height="40" Background="{DynamicResource IconPlateBrush}" CornerRadius="10">
+          <Border x:Name="AppIconPlate" Width="40" Height="40" Background="{DynamicResource IconPlateBrush}" BorderBrush="{DynamicResource IconEdgeBrush}" BorderThickness="1" CornerRadius="10" RenderTransformOrigin="0.5,0.5">
+            <motion:ControlMotion.Y><DoubleAnimation To="0" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></motion:ControlMotion.Y>
+            <motion:ControlMotion.ScaleY><DoubleAnimation To="1" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></motion:ControlMotion.ScaleY>
+            <motion:ControlMotion.ScaleX><DoubleAnimation To="1" Duration="0:0:0.16"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></motion:ControlMotion.ScaleX>
+            <Border.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform x:Name="AppIconScale" ScaleX="1" ScaleY="1"/>
+                <TranslateTransform x:Name="AppIconLift" Y="0"/>
+              </TransformGroup>
+            </Border.RenderTransform>
             <Grid Width="28" Height="28">
               <TextBlock Text="&#xE8A5;" Style="{StaticResource MissingIconGlyph}" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center"/>
               <Image Source="{Binding Icon}" Stretch="Uniform"/>
@@ -60,6 +94,12 @@
         </Grid>
         <DataTemplate.Triggers>
           <DataTrigger Binding="{Binding IsForeground}" Value="True"><Setter TargetName="ForegroundBadge" Property="Visibility" Value="Visible"/></DataTrigger>
+          <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+            <Setter TargetName="AppIconPlate" Property="motion:ControlMotion.ScaleX"><Setter.Value><DoubleAnimation To="1.06" Duration="0:0:0.14"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+              <Setter TargetName="AppIconPlate" Property="motion:ControlMotion.ScaleY"><Setter.Value><DoubleAnimation To="1.06" Duration="0:0:0.14"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+              <Setter TargetName="AppIconPlate" Property="motion:ControlMotion.Y"><Setter.Value><DoubleAnimation To="-1.5" Duration="0:0:0.14"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Setter.Value></Setter>
+
+          </DataTrigger>
         </DataTemplate.Triggers>
       </DataTemplate>
     </ResourceDictionary>

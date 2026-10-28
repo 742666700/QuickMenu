@@ -491,8 +491,8 @@ internal sealed partial class AmbientScene
         }
     }
 
-    // Cream daisy: orange daisies from Claude娘's outfit drift down across the window, turning as they fall; in the
-    // corner a bud opens for a bee and a butterfly now and then (AddBeeGarden).
+    // Cream daisy: orange daisies from Claude娘's outfit drift down across the window, turning and swaying gently as
+    // they fall; in the corner a bud opens for a bee and a butterfly now and then (AddBeeGarden).
     private void BuildPetals(double width, double height)
     {
         AddGlow(Color.FromArgb(0x2C, 0xF0, 0x7A, 0x3A), width * 0.7, new Point(width * 0.92, height * 0.55), new Vector(width * 0.06, height * 0.1), 19, 27);
@@ -505,13 +505,15 @@ internal sealed partial class AmbientScene
             var size = Between(10, 19);
             var flower = Daisy(i % 3 == 0 ? light : petals, heart, size);
             var turn = new RotateTransform(Between(0, 72));
+            var sway = new TranslateTransform();
             var fall = new TranslateTransform();
             flower.RenderTransformOrigin = new Point(0.5, 0.5);
-            flower.RenderTransform = new TransformGroup { Children = { turn, fall } };
-            // Most flowers fall on the right half, where she stands.
+            flower.RenderTransform = new TransformGroup { Children = { turn, sway, fall } };
+            // Most flowers fall on the right half, where she stands; the ones over the left columns stay softer so text stays clear.
             Canvas.SetLeft(flower, i < 7 ? Between(width * 0.45, width) : Between(0, width * 0.45));
             Canvas.SetTop(flower, -30);
-            flower.Opacity = Between(0.35, 0.75);
+            var rawOpacity = Between(0.35, 0.75);
+            flower.Opacity = i < 7 ? rawOpacity * 0.78 : rawOpacity * 0.45;
             _layer.Children.Add(flower);
             var phase = _random.NextDouble();
             var drift = -Between(60, 160);
@@ -519,6 +521,7 @@ internal sealed partial class AmbientScene
             fall.Y = (height + 60) * phase; fall.X = drift * phase;
             Add(fall, TranslateTransform.YProperty, new DoubleAnimation(0, height + 60, duration) { RepeatBehavior = RepeatBehavior.Forever }, phase);
             Add(fall, TranslateTransform.XProperty, new DoubleAnimation(0, drift, duration) { RepeatBehavior = RepeatBehavior.Forever }, phase);
+            Add(sway, TranslateTransform.XProperty, Slow(new DoubleAnimation(-9, 9, TimeSpan.FromSeconds(3.8 + i % 4 * 0.65)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = Sine }), phase);
             Add(turn, RotateTransform.AngleProperty, new DoubleAnimation(turn.Angle, turn.Angle + (i % 2 == 0 ? 360 : -360), TimeSpan.FromSeconds(Between(8, 16))) { RepeatBehavior = RepeatBehavior.Forever }, 0);
         }
         AddBeeGarden(width, height);
