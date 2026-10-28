@@ -11,6 +11,7 @@ namespace QuickMenu.Services;
 public sealed class IconService
 {
     private static readonly ConcurrentDictionary<string, ImageSource> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object ImageListLock = new();
     public ImageSource? GetForPath(string path) => GetForParsingName(path);
 
     public ImageSource? GetForParsingName(string parsingName)
@@ -19,7 +20,8 @@ public sealed class IconService
         nint pidl = 0;
         try
         {
-            using var apartment = new ComScope();
+            // Pass the flag explicitly: new ComScope() zero-initializes this struct without entering COM.
+            using var apartment = new ComScope(0);
             if (ShellInterop.SHParseDisplayName(parsingName, 0, out pidl, 0, out _) < 0) return null;
             if (ShellInterop.SHGetFileInfo(pidl, 0, out var info, (uint)Marshal.SizeOf<ShellInterop.SHFILEINFO>(), 0x100 | 0x8 | 0x4000) == 0)
                 return null;
@@ -30,20 +32,24 @@ public sealed class IconService
             if (image != null) Cache.TryAdd(parsingName, image);
             return image;
         }
-        catch (Exception ex) when (ex is COMException or ArgumentException or InvalidOperationException) { return null; }
+        catch (Exception ex) when (ex is COMException or ArgumentException or InvalidOperationException or InvalidCastException or InvalidComObjectException) { return null; }
         finally { if (pidl != 0) Marshal.FreeCoTaskMem(pidl); }
     }
 
     private static nint GetLargerIcon(int index)
     {
-        IImageList? images = null;
-        try
+        // Shell can return the same RCW to concurrent callers; one must not release it during another's GetIcon.
+        lock (ImageListLock)
         {
-            var iid = typeof(IImageList).GUID;
-            return ShellInterop.SHGetImageList(2, ref iid, out images) == 0 && images.GetIcon(index, 1, out var icon) == 0 ? icon : 0;
+            IImageList? images = null;
+            try
+            {
+                var iid = typeof(IImageList).GUID;
+                return ShellInterop.SHGetImageList(2, ref iid, out images) == 0 && images.GetIcon(index, 1, out var icon) == 0 ? icon : 0;
+            }
+            catch (Exception ex) when (ex is COMException or InvalidCastException or InvalidComObjectException) { return 0; }
+            finally { if (images != null) Marshal.ReleaseComObject(images); }
         }
-        catch (COMException) { return 0; }
-        finally { if (images != null) Marshal.ReleaseComObject(images); }
     }
 
     public ImageSource? GetForWindow(nint hwnd)
