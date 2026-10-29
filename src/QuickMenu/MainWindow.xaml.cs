@@ -65,12 +65,17 @@ public partial class MainWindow : Window
     public MainWindow(bool isQa = false)
     {
         _isQa = isQa;
+        if (isQa) _poseDice = new Random(17);
         ControlMotion.SetEnabled(this, AnimationsEnabled);
         _settingsService = new SettingsService(manageStartup: !isQa);
         _settings = _settingsService.Load();
         _desktopPreferences = new DesktopPreferencesService(ephemeral: isQa);
         InitializeComponent();
         _ambient = new AmbientScene(AmbientLayer, GreetingSpark);
+        _ambient.MomentStarted += theme =>
+        {
+            if (_settings.CharacterMotion && CurrentCharacter?.Theme == theme) _companion?.RequestCue(CompanionCue.Watch);
+        };
         // Every menu window, self-check ones included, gets the input-method guard as soon as it has a handle.
         SourceInitialized += (_, _) => HostNative.GuardImeRequests(this);
         CharacterPicker.Items.Add(Loc.T("Character.None"));
@@ -102,6 +107,10 @@ public partial class MainWindow : Window
         ApplyTheme(_settings.Theme);
         SetPage(MenuPage.Desktop);
         SizeChanged += (_, e) => { UpdateColumns(); if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 40 || Math.Abs(e.NewSize.Height - e.PreviousSize.Height) > 40) RebuildAmbient(); };
+        PreviewMouseMove += (_, _) => _companion?.NoteActivity();
+        PreviewMouseDown += (_, _) => _companion?.NoteActivity();
+        AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler((_, _) => _companion?.NoteActivity()), true);
+        PreviewTouchDown += (_, _) => _companion?.NoteActivity();
         Loaded += (_, _) => UpdateColumns();
         IsVisibleChanged += (_, _) => { if (!IsVisible) StopUiMotion(); };
         if (!isQa)
@@ -362,6 +371,11 @@ public partial class MainWindow : Window
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        if (_companion is not null && CurrentCharacter?.Id == "claude")
+        {
+            _companion.SetTyping(SearchBox.Text.Length > 0);
+        }
+
         if (_changingSearch || _desktopView is null) return;
         _session.Searches[_session.Page] = SearchBox.Text;
         _session.Selections[_session.Page] = 0;
@@ -517,7 +531,11 @@ public partial class MainWindow : Window
         else if (_previewReorder is { } drag) { SetReorderFade(drag, 1); _previewReorder = null; }
     }
 
-    private void MotionPreferenceChanged(object? sender, PropertyChangedEventArgs e) => RefreshMotionPolicy();
+    private void MotionPreferenceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SystemParameters.ClientAreaAnimation) or nameof(SystemParameters.MenuAnimation)
+            or nameof(SystemParameters.ComboBoxAnimation)) RefreshMotionPolicy();
+    }
     private void RenderingTierChanged(object? sender, EventArgs e) => RefreshMotionPolicy();
     private void RefreshMotionPolicy() => Dispatcher.BeginInvoke(() =>
     {
@@ -557,7 +575,7 @@ public partial class MainWindow : Window
             PageShift.BeginAnimation(TranslateTransform.YProperty, null);
             return;
         }
-        var duration = TimeSpan.FromMilliseconds(160);
+        var duration = TimeSpan.FromMilliseconds(MotionTimings.Entrance);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         var grow = new DoubleAnimation(0.985, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop };
         ContentRoot.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
@@ -576,7 +594,7 @@ public partial class MainWindow : Window
             return;
         }
         var direction = next > previous ? 1.0 : -1.0;
-        var duration = TimeSpan.FromMilliseconds(140);
+        var duration = TimeSpan.FromMilliseconds(MotionTimings.Page);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         PageHost.BeginAnimation(OpacityProperty, new DoubleAnimation(0.25, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
         PageShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(direction * 10, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
@@ -590,7 +608,7 @@ public partial class MainWindow : Window
             PageShift.BeginAnimation(TranslateTransform.YProperty, null);
             return;
         }
-        var duration = TimeSpan.FromMilliseconds(110);
+        var duration = TimeSpan.FromMilliseconds(MotionTimings.Category);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         DesktopList.BeginAnimation(OpacityProperty, new DoubleAnimation(0.35, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
         PageShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(4, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
@@ -600,7 +618,7 @@ public partial class MainWindow : Window
     {
         var scale = (ScaleTransform)panel.RenderTransform;
         if (!AnimationsEnabled) { Overlay.BeginAnimation(OpacityProperty, null); scale.BeginAnimation(ScaleTransform.ScaleXProperty, null); scale.BeginAnimation(ScaleTransform.ScaleYProperty, null); return; }
-        var duration = TimeSpan.FromMilliseconds(160);
+        var duration = TimeSpan.FromMilliseconds(MotionTimings.Entrance);
         var grow = new DoubleAnimation(0.94, 1, duration) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.2 }, FillBehavior = FillBehavior.Stop };
         Overlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140)) { FillBehavior = FillBehavior.Stop });
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
@@ -831,7 +849,7 @@ public partial class MainWindow : Window
         ApplyCompanion();
         RebuildAmbient();
         if (IsVisible && AnimationsEnabled)
-            RootGrid.BeginAnimation(OpacityProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(140)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
+            RootGrid.BeginAnimation(OpacityProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(MotionTimings.Theme)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop });
         AppearanceChanged?.Invoke(dark);
     }
 
@@ -1127,7 +1145,7 @@ public partial class MainWindow : Window
         if (_ambient is null) return;
         var running = _ambient.IsRunning;
         _ambient.Build(_theme, new Size(ActualWidth > 0 ? ActualWidth : Width, ActualHeight > 0 ? ActualHeight : Height), GreetingSpark.Visibility == Visibility.Visible);
-        if (running || (IsVisible && AnimationsEnabled)) _ambient.Start();
+        if (running || (IsVisible && AnimationsEnabled && _companion?.DirectorState != CompanionState.Quiescent)) _ambient.Start();
     }
 
     // OLED panels age where the same pixels stay lit. Each invocation moves the whole content by one pixel
@@ -1151,6 +1169,11 @@ public partial class MainWindow : Window
     private string? _previewCompanion;
     internal void PreviewCompanion(string? id) { _previewCompanion = id; ApplyCompanion(); ShowCompanion(); }
     // Explicit opt-in for CPU measurements; normal QA screenshots keep animation stopped.
+    internal void PreviewPoseIndex(int index) { _pose = index; ApplyCompanion(); }
+    internal void PreviewPerformanceScene()
+    {
+        _ambient.ResetForPerformance(); RebuildAmbient(); _companion?.ResetForPerformance(); PreviewMotion();
+    }
     internal void PreviewMotion() { _ambient.Start(); if (CompanionShown) _companion!.StartMotion(); }
     private Character? _posed;
     private int _pose = -1;
@@ -1165,15 +1188,10 @@ public partial class MainWindow : Window
     internal void ChangePose()
     {
         if (CurrentCharacter is not { } character) return;
-        var poses = character.Poses;
-        if (_posed != character || _pose < 0) _pose = _poseDice.Next(poses.Count);
-        else
-        {
-            var groups = poses.Select(pose => pose.Group).Distinct().Order().ToArray();
-            var group = groups.Length == 1 ? groups[0] : groups[(Array.IndexOf(groups, poses[_pose].Group) + 1) % groups.Length];
-            var choices = Enumerable.Range(0, poses.Count).Where(i => poses[i].Group == group && i != _pose).ToArray();
-            if (choices.Length > 0) _pose = choices[_poseDice.Next(choices.Length)];
-        }
+        var allowed = Enumerable.Range(0, character.Poses.Count).Where(i => _settings.CharacterMotion || !character.Poses[i].MotionOnly).ToArray();
+        var previous = _posed == character ? Array.IndexOf(allowed, _pose) : -1;
+        _pose = allowed[CompanionSchedule.SelectPose(allowed.Select(i => new PoseChoice(character.Poses[i].Group, character.Poses[i].Hours)).ToArray(),
+            previous, TimeOnly.FromDateTime(DateTime.Now), _poseDice.NextDouble)];
         _posed = character;
         ApplyCompanion();
     }
@@ -1188,15 +1206,22 @@ public partial class MainWindow : Window
         GreetingSpark.Visibility = avatar is null ? Visibility.Visible : Visibility.Hidden;
         if (character is null) { HideCompanion(); return; }
         if (_posed != character || _pose < 0) { _posed = character; _pose = _poseDice.Next(character.Poses.Count); }
+        if (!_settings.CharacterMotion && character.Poses[_pose].MotionOnly)
+            _pose = Enumerable.Range(0, character.Poses.Count).First(i => !character.Poses[i].MotionOnly);
         if (_companion is null)
         {
             _companion = new CompanionWindow();
+            _companion.QuiescenceChanged += quiet =>
+            {
+                if (quiet) { _ambient.Stop(); _refreshTimer.Stop(); }
+                else if (IsVisible && AnimationsEnabled) { _ambient.Start(); _refreshTimer.Start(); }
+            };
             // Her window never takes focus, so with "keep open" a click on her while the menu waits behind another
             // window would otherwise do nothing; it brings the menu back, like clicking the menu itself.
             _companion.Clicked += () =>
             {
                 if (_disposed || !IsVisible) return;
-                if (!IsActive) BringBack();
+                if (!IsActive) { _companion.NoteActivity(); BringBack(); }
                 else if (AnimationsEnabled) _companion.PlayClickReaction();
             };
         }
@@ -1208,10 +1233,11 @@ public partial class MainWindow : Window
             QuickMenu.Models.ThemeMode.DeepSeek => "#4D6BFE", QuickMenu.Models.ThemeMode.Gemini => "#C9B8FF", _ => "#E87A3C"
         });
         var pose = character.Poses[_pose];
-        _companion.Present(character.Name, pose, FigureHeight * character.HeightScale * pose.Scale, glint, night ? (byte)0x70 : (byte)0x38, 2, character.Glint);
+        _companion.Present(character, pose, FigureHeight * character.HeightScale * pose.Scale, glint, night ? (byte)0x70 : (byte)0x38, 2, character.Glint);
         // Saving a wider character while the menu is open must recheck the available screen space too.
         if (IsVisible && !_isQa && previousFootprint != _companion.Footprint) PlaceWindow();
         if (IsVisible) ShowCompanion();
+        _companion.SetTyping(character.Id == "claude" && SearchBox.Text.Length > 0);
     }
 
     private void ShowCompanion()
@@ -1223,8 +1249,9 @@ public partial class MainWindow : Window
         var appearing = !_companion.IsVisible;
         _companion.Show();
         if (!AnimationsEnabled) { _companion.StopMotion(); return; }
-        if (appearing) _companion.PlayEntrance();
+        _companion.SetSpontaneous(_settings.CharacterMotion);
         _companion.StartMotion();
+        if (appearing) _companion.PlayEntrance();
     }
 
     private void HideCompanion()

@@ -39,6 +39,7 @@ public partial class MainWindow
     internal void OnGamepad(GamepadButton button)
     {
         if (_disposed || !IsVisible) return;
+        _companion?.NoteActivity();
         var popup = OpenPopupFocus();
         switch (button)
         {

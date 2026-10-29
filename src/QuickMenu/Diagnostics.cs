@@ -40,7 +40,9 @@ internal static partial class Diagnostics
         Loc.Use(Loc.Chinese);
         try
         {
-            if (args.Contains("--measure-performance")) await InspectPerformance(output);
+            if (args.Contains("--companion-only")) await InspectCompanions(output);
+            else if (args.Contains("--measure-performance")) await InspectPerformance(output,
+                args.FirstOrDefault(arg => arg.StartsWith("--performance-case=", StringComparison.Ordinal))?.Split('=', 2)[1]);
             else if (args.Contains("--diagnostics")) await InspectSystem(output);
             else await InspectInterface(output, args.Contains("--hold-preview"), args.Contains("--preview-light"));
             System.Windows.Application.Current.Shutdown(0);
@@ -59,10 +61,11 @@ internal static partial class Diagnostics
         return Path.GetFullPath(index >= 0 && index + 1 < args.Length ? args[index + 1] : Path.Combine(AppContext.BaseDirectory, "qa"));
     }
 
-    private static async Task InspectPerformance(string output)
+    private static async Task InspectPerformance(string output, string? only = null)
     {
         var rows = new List<object>();
         var window = new MainWindow(isQa: true);
+        window.Left = 100; window.Top = 100;
         window.Show();
         using var process = Process.GetCurrentProcess();
         async Task<double> Sample()
@@ -71,15 +74,33 @@ internal static partial class Diagnostics
             await Task.Delay(TimeSpan.FromSeconds(10));
             process.Refresh(); return (process.TotalProcessorTime - cpu).TotalSeconds / watch.Elapsed.TotalSeconds * 100;
         }
-        foreach (var (theme, id) in new[] { (ThemeMode.Oled, "claude"), (ThemeMode.Cream, "claude"), (ThemeMode.OledDay, "claude"), (ThemeMode.ChatGpt, "chatgpt"), (ThemeMode.DeepSeek, "deepseek"), (ThemeMode.DeepSeek, "deepseek-rice"), (ThemeMode.Gemini, "gemini") })
+        var cases = new[] { (ThemeMode.Oled, "claude"), (ThemeMode.Cream, "claude"), (ThemeMode.OledDay, "claude"), (ThemeMode.ChatGpt, "chatgpt"), (ThemeMode.DeepSeek, "deepseek"), (ThemeMode.DeepSeek, "deepseek-rice"), (ThemeMode.Gemini, "gemini") }
+            .Where(pair => only is null || $"{pair.Item1}/{pair.Item2}" == only).ToArray();
+        if (cases.Length == 0) throw new ArgumentException("Unknown performance case.", nameof(only));
+        foreach (var (theme, id) in cases)
         {
             window.ApplyTheme(theme); window.PreviewCompanion(id);
-            window.InvokeMenu(); window.PreviewHide(); window.InvokeMenu(); window.PreviewMotion();
+            window.InvokeMenu(); window.PreviewHide(); window.InvokeMenu(); window.PreviewPoseIndex(0);
+            await window.Companion!.MotionReady;
+            window.PreviewPerformanceScene();
             await Task.Delay(TimeSpan.FromSeconds(35));
+            window.Companion.PreviewIdleClip();
+            window.Companion.PreviewSampleActions();
+            var actionsBefore = window.Companion.IdlePlays;
+            var alignedBefore = window.Companion.AlignedIdlePlays;
+            var scene = new { Host = process.ProcessName, WindowDpi = VisualTreeHelper.GetDpi(window).DpiScaleX,
+                CompanionDpi = VisualTreeHelper.GetDpi(window.Companion).DpiScaleX, WindowWidth = window.ActualWidth, WindowHeight = window.ActualHeight,
+                CompanionWidth = window.Companion.ActualWidth, CompanionHeight = window.Companion.ActualHeight, WindowVisible = window.IsVisible,
+                CompanionVisible = window.Companion.IsVisible, WindowActive = window.IsActive };
             var shown = await Sample();
+            var actions = window.Companion.IdlePlays - actionsBefore;
+            var aligned = window.Companion.AlignedIdlePlays - alignedBefore;
+            await File.WriteAllTextAsync(Path.Combine(output, $"trace-{theme}-{id}.json"), JsonSerializer.Serialize(window.Companion.SampleTrace, new JsonSerializerOptions { WriteIndented = true }));
+            if (actions < 1) throw new InvalidOperationException("Performance sampling missed its idle clip.");
             window.PreviewHide(); await Task.Delay(1500); var hidden = await Sample();
-            rows.Add(new { Theme = theme.ToString(), Character = id, ShownSingleCorePercent = Math.Round(shown, 3), HiddenSingleCorePercent = Math.Round(hidden, 3) });
-            await File.WriteAllTextAsync(Path.Combine(output, "performance-report.json"), JsonSerializer.Serialize(new { Samples = rows, WarmupSeconds = 35, SampleSeconds = 10, RenderTier = RenderCapability.Tier >> 16, Notes = "QA-only windows, actual WPF scene and companion clocks enabled, second invocation, CPU time divided by wall time (one core = 100%). User settings are never written." }, new JsonSerializerOptions { WriteIndented = true }));
+            rows.Add(new { Theme = theme.ToString(), Character = id, ShownSingleCorePercent = Math.Round(shown, 3), HiddenSingleCorePercent = Math.Round(hidden, 3), SampleIdleClips = actions, SampleCoalescedClips = aligned,
+                Scene = scene });
+            await File.WriteAllTextAsync(Path.Combine(output, "performance-report.json"), JsonSerializer.Serialize(new { Samples = rows, WarmupSeconds = 35, SampleSeconds = 10, RenderTier = RenderCapability.Tier >> 16, Notes = "QA-only windows, front pose, fixed scene phase, second invocation, CPU time divided by wall time (one core = 100%). Each shown sample includes an authored idle clip; only poses without authored idle content use a base/blink/vector fixture. QA intervals are 5-8 seconds, aligned within that range to existing sparkle bursts. User settings are never written." }, new JsonSerializerOptions { WriteIndented = true }));
             window.Show();
         }
         window.DisposeServices(); window.Close();
@@ -221,12 +242,13 @@ internal static partial class Diagnostics
         {
             window.ApplyTheme(theme);
             poses.Add(window.CurrentPose!);
-            checks[$"pose shown matches the pose picked ({name})"] = companion.Pose == window.CurrentPose!.Body && companion.CanBlink == (window.CurrentPose.Blink is not null);
+            await companion.MotionReady;
+            checks[$"pose shown matches the pose picked ({name})"] = companion.Pose == window.CurrentPose!.Body && companion.CanBlink == (window.CurrentPose.HasBlink);
             CaptureWithCompanion(window, companion, Path.Combine(output, $"desktop-{name}-companion.png"));
             window.ChangePose();
         }
         checks["each invocation shows a different pose than the last"] = poses.Zip(poses.Skip(1)).All(pair => pair.First != pair.Second);
-        checks["every Claude娘 pose is used and the front one can blink"] = poses.Distinct().Count() == Characters.All[0].Poses.Count && Characters.All[0].Poses.Count >= 2 && Characters.All[0].Poses.Any(pose => pose.Blink is not null);
+        checks["every Claude娘 pose is used and the front one can blink"] = poses.Distinct().Count() == Characters.All[0].Poses.Count && Characters.All[0].Poses.Count >= 2 && Characters.All[0].Poses.Any(pose => pose.HasBlink);
         window.PreviewHide();
         checks["Claude娘 leaves with the menu"] = !window.CompanionShown && !companion.IsAnimating;
         window.Show();
@@ -535,6 +557,7 @@ internal static partial class Diagnostics
         checks["switching back to Chinese restores the interface"] = window.SearchPlaceholder.Text == "搜索桌面" && (string)window.DesktopNav.Content == "桌面";
         window.ApplyTheme(ThemeMode.Oled);
         await InspectMotion(window, checks, output, items);
+        await InspectCompanionEngine(window, checks, output);
         var timings = new List<double>();
         for (var i = 0; i < 8; i++)
         {
@@ -567,7 +590,7 @@ internal static partial class Diagnostics
         foreach (var character in Characters.All)
         {
             var folder = character.Folder;
-            checks[$"{character.Id}: two poses, blink and avatar"] = character.Poses.Count >= 2 && character.Poses.Any(pose => pose.Blink is not null) && character.Avatar is not null;
+            checks[$"{character.Id}: two poses, blink and avatar"] = character.Poses.Count >= 2 && character.Poses.Any(pose => pose.HasBlink) && character.Avatar is not null;
             foreach (var pose in character.Poses)
             {
                 var body = ReadArt(folder, pose.File);
@@ -576,11 +599,12 @@ internal static partial class Diagnostics
                 var corners = new[] { 3, body.PixelWidth * 4 - 1, (body.PixelHeight - 1) * body.PixelWidth * 4 + 3, pixels.Length - 1 };
                 var ratio = body.PixelWidth / (double)body.PixelHeight;
                 // Standing figures are portrait; a sitting, animated pose may be nearly square.
-                checks[$"{character.Id}/{pose.File}: 1200px, transparent corners and portrait ratio"] = body.PixelHeight == 1200 && ratio >= 0.35 && ratio <= (pose.Frames is null ? 0.8 : 1.0) && corners.All(i => pixels[i] == 0);
-                if (pose.Frames is { } frames)
-                    checks[$"{character.Id}/{pose.File}: animation frames share one canvas"] = frames.Count >= 2 && frames.All(frame => frame.Frame.PixelWidth == pose.Body.PixelWidth && frame.Frame.PixelHeight == pose.Body.PixelHeight && frame.Hold > TimeSpan.Zero);
+                checks[$"{character.Id}/{pose.Id}: 1200px, transparent corners and portrait ratio"] = body.PixelHeight == 1200 && ratio >= 0.35 && ratio <= (pose.HasFrames || pose.MotionOnly ? 1.0 : 0.8) && corners.All(i => pixels[i] == 0);
+                var prepared = await pose.Prepare(CancellationToken.None);
+                if (prepared.Frames is { Count: > 0 } frames)
+                    checks[$"{character.Id}/{pose.File}: animation frames share one canvas"] = frames.Count >= 2 && frames.All(frame => frame.Picture.PixelWidth == pose.Body.PixelWidth && frame.Picture.PixelHeight == pose.Body.PixelHeight && frame.Hold > TimeSpan.Zero);
             }
-            var front = ReadArt(folder, "front.png"); var blink = ReadArt(folder, "front-blink.png");
+            var front = ReadArt(folder, "front.png"); var blink = ReadArt(folder, "front.blink-1.png");
             checks[$"{character.Id}: blink dimensions match"] = front.PixelWidth == blink.PixelWidth && front.PixelHeight == blink.PixelHeight;
             window.PreviewCompanion(character.Id);
             var companion = window.Companion!;
@@ -614,7 +638,7 @@ internal static partial class Diagnostics
                     var pose = window.CurrentPose!;
                     if (captured.Add(pose))
                     {
-                        var path = Path.Combine(output, $"desktop-{theme.ToString().ToLowerInvariant()}-{character.Id}-{Path.GetFileNameWithoutExtension(pose.File)}.png");
+                        var path = Path.Combine(output, $"desktop-{theme.ToString().ToLowerInvariant()}-{character.Id}-{pose.Id}.png");
                         CaptureWithCompanion(window, companion, path);
                         if (theme == paired) shots.Add(path);
                     }
@@ -622,7 +646,7 @@ internal static partial class Diagnostics
                 }
             }
             // Each row keeps the poses in their defined order regardless of the random starting pose.
-            sheet.Add(shots.OrderBy(path => character.Poses.ToList().FindIndex(pose => path.EndsWith($"-{Path.GetFileNameWithoutExtension(pose.File)}.png"))).ToList());
+            sheet.Add(shots.OrderBy(path => character.Poses.ToList().FindIndex(pose => path.EndsWith($"-{pose.Id}.png"))).ToList());
             window.PreviewHide();
             checks[$"{character.Id}: hidden companion stops motion"] = !window.CompanionShown && !companion.IsAnimating;
             window.Show();
@@ -632,11 +656,12 @@ internal static partial class Diagnostics
         // The rice-bowl DeepSeek娘's eating pose plays its pictures in turn and starts over from the first.
         window.ApplyTheme(ThemeMode.DeepSeek);
         window.PreviewCompanion("deepseek-rice");
-        for (var i = 0; i < 4 && window.CurrentPose!.Frames is null; i++) window.ChangePose();
+        window.PreviewPoseIndex(Characters.Find("deepseek-rice")!.Poses.ToList().FindIndex(p => p.HasFrames));
         var eating = window.CurrentPose!;
         var eater = window.Companion!;
         eater.StartMotion();
-        await Task.Delay(eating.Frames![0].Hold + TimeSpan.FromMilliseconds(400));
+        await eater.MotionReady;
+        await Task.Delay(eater.PreparedMotion.Frames[0].Hold + TimeSpan.FromMilliseconds(400));
         var advanced = eater.IsPlayingFrames && eater.Pose != eating.Body;
         eater.StopMotion();
         checks["deepseek-rice: eating pose plays its frames and rewinds"] = advanced && eater.Pose == eating.Body && !eater.IsPlayingFrames;
@@ -721,11 +746,8 @@ internal static partial class Diagnostics
         await YieldRender();
     }
 
-    private static BitmapSource ReadArt(string folder, string file)
-    {
-        using var stream = Application.GetResourceStream(new Uri($"pack://application:,,,/Assets/Characters/{folder}/{file}"))!.Stream;
-        return new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames[0];
-    }
+    private static BitmapSource ReadArt(string folder, string file) => CharacterArt.Load(folder, file);
+
 
     private static double Contrast(Color a, Color b)
     {
@@ -740,10 +762,11 @@ internal static partial class Diagnostics
     private static void CaptureSheet(List<List<string>> rows, string path)
     {
         const int cellWidth = 600, cellHeight = 370;
+        var columns = Math.Max(1, rows.Max(row => row.Count));
         var visual = new DrawingVisual();
         using (var context = visual.RenderOpen())
         {
-            context.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x4A, 0x52, 0x60)), null, new Rect(0, 0, cellWidth * 2, cellHeight * rows.Count));
+            context.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x4A, 0x52, 0x60)), null, new Rect(0, 0, cellWidth * columns, cellHeight * rows.Count));
             for (var row = 0; row < rows.Count; row++)
                 for (var col = 0; col < rows[row].Count; col++)
                 {
@@ -752,7 +775,7 @@ internal static partial class Diagnostics
                     context.DrawImage(image, new Rect(col * cellWidth + 8, row * cellHeight + 8, image.Width * scale, image.Height * scale));
                 }
         }
-        var bitmap = new RenderTargetBitmap(cellWidth * 2, cellHeight * rows.Count, 96, 96, PixelFormats.Pbgra32); bitmap.Render(visual);
+        var bitmap = new RenderTargetBitmap(cellWidth * columns, cellHeight * rows.Count, 96, 96, PixelFormats.Pbgra32); bitmap.Render(visual);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using var stream = File.Create(path); encoder.Save(stream);
     }
 

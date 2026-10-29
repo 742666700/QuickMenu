@@ -9,3 +9,6 @@ artifacts/
 # Python caches
 __pycache__/
 *.pyc
+
+# Unprocessed character artwork
+art-work/

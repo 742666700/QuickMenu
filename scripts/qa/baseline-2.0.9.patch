@@ -1,0 +1,78 @@
+--- a/src/QuickMenu/AmbientScene.cs
++++ b/src/QuickMenu/AmbientScene.cs
+@@ -40,13 +40,14 @@
+     private readonly List<Burst> _bursts = new();
+     private readonly List<DispatcherTimer> _timers = new();
+     private readonly List<(IAnimatable Target, DependencyProperty Property, AnimationClock Clock)> _clocks = new();
+-    private readonly Random _random = new(7);
++    private Random _random = new(7);
+     private Burst? _moment;
+     private TranslateTransform? _whaleRise;
+     private TimeSpan _elapsed;
+     private DateTime _startedAt;
+ 
+     public bool IsRunning { get; private set; }
++    internal void ResetForPerformance() { Stop(); _elapsed = TimeSpan.Zero; _random = new Random(7); }
+     public ThemeMode Mode { get; private set; }
+ 
+     public AmbientScene(Canvas layer, FrameworkElement? greetingSpark = null)
+--- a/src/QuickMenu/CompanionWindow.cs
++++ b/src/QuickMenu/CompanionWindow.cs
+@@ -32,7 +32,7 @@
+     private readonly DispatcherTimer _frameTimer = new();
+     private IReadOnlyList<(BitmapSource Frame, TimeSpan Hold)>? _frames;
+     private int _frame;
+-    private readonly Random _random = new();
++    private Random _random = new();
+     private bool _animated;
+     private CharacterPose? _pose;
+     private double _figureWidth, _figureHeight, _scale = 1;
+@@ -111,6 +111,8 @@
+         if (running) StartMotion();
+     }
+ 
++    internal void ResetForPerformance() { StopMotion(); _random = new Random(7); _glints.ResetForPerformance(); Layout(); }
++
+     public void PlaceBeside(Window menu) => HostNative.PlaceAtRightEdge(this, menu, Overlap, FeetDrop);
+ 
+     /// <summary>
+--- a/src/QuickMenu/MainWindow.xaml.cs
++++ b/src/QuickMenu/MainWindow.xaml.cs
+@@ -1027,6 +1027,8 @@
+     private string? _previewCompanion;
+     internal void PreviewCompanion(string? id) { _previewCompanion = id; ApplyCompanion(); ShowCompanion(); }
+     // Explicit opt-in for CPU measurements; normal QA screenshots keep animation stopped.
++    internal void PreviewPoseIndex(int index) { _pose = index; ApplyCompanion(); }
++    internal void PreviewPerformanceScene() { _ambient.ResetForPerformance(); RebuildAmbient(); _companion?.ResetForPerformance(); PreviewMotion(); }
+     internal void PreviewMotion() { _ambient.Start(); if (CompanionShown) _companion!.StartMotion(); }
+     private Character? _posed;
+     private int _pose = -1;
+--- a/src/QuickMenu/Diagnostics.cs
++++ b/src/QuickMenu/Diagnostics.cs
+@@ -63,6 +63,7 @@
+     {
+         var rows = new List<object>();
+         var window = new MainWindow(isQa: true);
++        window.Left = 100; window.Top = 100;
+         window.Show();
+         using var process = Process.GetCurrentProcess();
+         async Task<double> Sample()
+@@ -74,11 +75,16 @@
+         foreach (var (theme, id) in new[] { (ThemeMode.Oled, "claude"), (ThemeMode.Cream, "claude"), (ThemeMode.OledDay, "claude"), (ThemeMode.ChatGpt, "chatgpt"), (ThemeMode.DeepSeek, "deepseek"), (ThemeMode.DeepSeek, "deepseek-rice"), (ThemeMode.Gemini, "gemini") })
+         {
+             window.ApplyTheme(theme); window.PreviewCompanion(id);
+-            window.InvokeMenu(); window.PreviewHide(); window.InvokeMenu(); window.PreviewMotion();
++            window.InvokeMenu(); window.PreviewHide(); window.InvokeMenu(); window.PreviewPoseIndex(0);
++            window.PreviewPerformanceScene();
+             await Task.Delay(TimeSpan.FromSeconds(35));
++            var scene = new { Host = process.ProcessName, WindowDpi = VisualTreeHelper.GetDpi(window).DpiScaleX,
++                CompanionDpi = VisualTreeHelper.GetDpi(window.Companion!).DpiScaleX, WindowWidth = window.ActualWidth, WindowHeight = window.ActualHeight,
++                CompanionWidth = window.Companion!.ActualWidth, CompanionHeight = window.Companion.ActualHeight, WindowVisible = window.IsVisible,
++                CompanionVisible = window.Companion.IsVisible, WindowActive = window.IsActive };
+             var shown = await Sample();
+             window.PreviewHide(); await Task.Delay(1500); var hidden = await Sample();
+-            rows.Add(new { Theme = theme.ToString(), Character = id, ShownSingleCorePercent = Math.Round(shown, 3), HiddenSingleCorePercent = Math.Round(hidden, 3) });
++            rows.Add(new { Theme = theme.ToString(), Character = id, ShownSingleCorePercent = Math.Round(shown, 3), HiddenSingleCorePercent = Math.Round(hidden, 3), Scene = scene });
+             await File.WriteAllTextAsync(Path.Combine(output, "performance-report.json"), JsonSerializer.Serialize(new { Samples = rows, WarmupSeconds = 35, SampleSeconds = 10, RenderTier = RenderCapability.Tier >> 16, Notes = "QA-only windows, actual WPF scene and companion clocks enabled, second invocation, CPU time divided by wall time (one core = 100%). User settings are never written." }, new JsonSerializerOptions { WriteIndented = true }));
+             window.Show();
+         }

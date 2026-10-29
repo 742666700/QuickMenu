@@ -139,7 +139,7 @@ public sealed class DesktopService
         nint pidl = 0;
         try
         {
-            using var apartment = new ComScope();
+            using var apartment = new ComScope(0);
             if (string.IsNullOrWhiteSpace(item.ParsingName) || ShellInterop.SHParseDisplayName(item.ParsingName, 0, out pidl, 0, out _) < 0)
                 return new(false, Loc.T("Desktop.Stale"));
             var info = new ShellInterop.SHELLEXECUTEINFO

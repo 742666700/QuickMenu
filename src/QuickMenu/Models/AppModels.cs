@@ -41,6 +41,7 @@ public sealed class AppSettings
     public string Character { get; set; } = "claude";
     /// <summary>Choosing a theme made from a character's colours brings that character along (still changeable by hand).</summary>
     public bool CharacterFollowsTheme { get; set; } = true;
+    public bool CharacterMotion { get; set; } = true;
     /// <summary>The greeting also shows the time: the local clock, and optionally a second time zone.</summary>
     public bool ShowWorldClock { get; set; } = true;
     /// <summary>What the local clock is called in the greeting ("美国时间"); empty shows just the time.</summary>

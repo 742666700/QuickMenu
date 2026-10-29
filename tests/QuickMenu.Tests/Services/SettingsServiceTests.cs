@@ -7,6 +7,44 @@ namespace QuickMenu.Tests.Services;
 
 public class SettingsServiceTests
 {
+    [Theory]
+    [InlineData("{}", true)]
+    [InlineData("{\"CharacterMotion\":false}", false)]
+    [InlineData("{\"CharacterMotion\":true}", true)]
+    public void CharacterMotionDefaultsOnAndRoundTrips(string json, bool expected)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, json);
+            var service = new SettingsService(path, false);
+            var settings = service.Load();
+            Assert.Equal(expected, settings.CharacterMotion);
+            Assert.True(service.Save(settings).Success);
+            Assert.Equal(expected, service.Load().CharacterMotion);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("12")]
+    [InlineData("\"off\"")]
+    [InlineData("{}")]
+    public void InvalidCharacterMotionResetsOnlyThatField(string invalid)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "{\"Version\":2,\"Character\":\"gemini\",\"StayOpenOnClickOutside\":true,\"CharacterMotion\":" + invalid + "}");
+            var loaded = new SettingsService(path, false).Load();
+            Assert.True(loaded.CharacterMotion);
+            Assert.Equal("gemini", loaded.Character);
+            Assert.True(loaded.StayOpenOnClickOutside);
+            Assert.Single(SetAside(path));
+        }
+        finally { File.Delete(path); foreach (var copy in SetAside(path)) File.Delete(copy); }
+    }
     [Fact]
     public void MalformedSettingsFallBackWithoutThrowing()
     {

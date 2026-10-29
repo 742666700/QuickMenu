@@ -284,6 +284,7 @@
                       <!-- "不显示" first, then MainWindow fills in every character. -->
                       <ComboBox x:Name="CharacterPicker" Padding="10,7" AutomationProperties.Name="{DynamicResource S.Settings.Character}"/>
                       <TextBlock Text="{DynamicResource S.Settings.CharacterHint}" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="1,8,0,0" TextWrapping="Wrap"/>
+                      <CheckBox x:Name="CharacterMotionCheck" Content="{DynamicResource S.Settings.CharacterMotion}" Margin="0,12,0,0"/>
                       <CheckBox x:Name="FollowThemeCheck" Content="{DynamicResource S.Settings.FollowTheme}" Margin="0,14,0,0" AutomationProperties.Name="{DynamicResource S.Settings.FollowThemeName}"/>
                       <TextBlock Text="{DynamicResource S.Settings.FollowThemeHint}" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="1,8,0,0" TextWrapping="Wrap"/>
                     </StackPanel>

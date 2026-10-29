@@ -46,6 +46,7 @@ public partial class MainWindow
         SettingsPanel.IsVisibleChanged += (_, _) => { if (!SettingsPanel.IsVisible) CancelSettingsScroll(); };
         ThemePicker.SelectionChanged += (_, _) => { FollowTheme(); CommitSettings(); };
         CharacterPicker.SelectionChanged += (_, _) => CommitSettings();
+        CharacterMotionCheck.Click += (_, _) => CommitSettings();
         FollowThemeCheck.Click += (_, _) => { FollowTheme(); CommitSettings(); };
         WorldClockCheck.Click += (_, _) => CommitSettings();
         StartupCheck.Click += (_, _) => CommitSettings();
@@ -68,6 +69,7 @@ public partial class MainWindow
         ThemePicker.SelectedIndex = Math.Max(0, Array.IndexOf(ThemeChoices, _settings.Theme));
         CharacterPicker.SelectedIndex = PickerIndex(Characters.Find(_settings.Character));
         FollowThemeCheck.IsChecked = _settings.CharacterFollowsTheme;
+        CharacterMotionCheck.IsChecked = _settings.CharacterMotion;
         WorldClockCheck.IsChecked = _settings.ShowWorldClock;
         ClockLabelBox.Text = _settings.ClockLabel ?? "";
         var zone = ZoneOf(_settings.SecondClockZone);
@@ -94,6 +96,7 @@ public partial class MainWindow
         next.HotkeyModifiers = _draftModifiers; next.HotkeyKey = _draftKey;
         next.Theme = ThemeChoices[Math.Max(0, ThemePicker.SelectedIndex)];
         next.Character = CharacterPicker.SelectedIndex > 0 ? Characters.All[CharacterPicker.SelectedIndex - 1].Id : "";
+        next.CharacterMotion = CharacterMotionCheck.IsChecked == true;
         next.CharacterFollowsTheme = FollowThemeCheck.IsChecked == true;
         next.ShowWorldClock = WorldClockCheck.IsChecked == true;
         next.ClockLabel = ClockLabelBox.Text.Trim();
@@ -106,7 +109,7 @@ public partial class MainWindow
         next.Language = LanguagePicker.SelectedIndex switch { 1 => Loc.Chinese, 2 => Loc.English, _ => "" };
         var relanguage = Loc.Resolve(next.Language) != Loc.Current;
         UpdateClockOptions(next);
-        if (_isQa) { _settings = next; if (relanguage) Loc.Use(next.Language); return; }
+        if (_isQa) { _settings = next; _companion?.SetSpontaneous(next.CharacterMotion); if (CurrentPose?.MotionOnly == true && !next.CharacterMotion) ApplyCompanion(); if (relanguage) Loc.Use(next.Language); return; }
         var hotkeyChanged = next.HotkeyModifiers != _settings.HotkeyModifiers || next.HotkeyKey != _settings.HotkeyKey;
         if (hotkeyChanged)
         {
@@ -122,6 +125,8 @@ public partial class MainWindow
         if (!saved.Success) { if (hotkeyChanged) _hotkeys?.TryRegister(_settings.HotkeyModifiers, _settings.HotkeyKey); SetStatus(saved.Message); return; }
         var restyle = next.Theme != _settings.Theme || next.Character != _settings.Character;
         _settings = next; _hotkeyError = "";
+        _companion?.SetSpontaneous(next.CharacterMotion);
+        if (CurrentPose?.MotionOnly == true && !next.CharacterMotion) ApplyCompanion();
         if (restyle) ApplyTheme(next.Theme);
         if (_gamepad != null) _gamepad.Enabled = next.Gamepad;
         if (relanguage) Loc.Use(next.Language);
@@ -227,7 +232,7 @@ public partial class MainWindow
         }
         var from = SettingsPanel.VerticalOffset;
         if (Math.Abs(target - from) < 1) { UpdateSectionButtons(); return; }
-        var glide = new DoubleAnimation(from, target, TimeSpan.FromMilliseconds(200))
+        var glide = new DoubleAnimation(from, target, TimeSpan.FromMilliseconds(MotionTimings.SettingsScroll))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };

@@ -39,14 +39,31 @@ internal sealed partial class AmbientScene
     private readonly List<Motion> _motions = new();
     private readonly List<Burst> _bursts = new();
     private readonly List<DispatcherTimer> _timers = new();
+    private readonly Dictionary<Burst, DateTimeOffset> _burstDue = new();
     private readonly List<(IAnimatable Target, DependencyProperty Property, AnimationClock Clock)> _clocks = new();
-    private readonly Random _random = new(7);
+    private Random _random = new(7);
     private Burst? _moment;
     private TranslateTransform? _whaleRise;
     private TimeSpan _elapsed;
     private DateTime _startedAt;
 
     public bool IsRunning { get; private set; }
+    internal bool HasBursts => _bursts.Count > 0;
+    public event Action<ThemeMode>? MomentStarted;
+    internal event Action? BurstStarted;
+    internal DateTimeOffset? AlignBurst(DateTimeOffset earliest, DateTimeOffset latest)
+    {
+        DateTimeOffset? next = null;
+        foreach (var (burst, due) in _burstDue)
+        {
+            var candidate = due;
+            if (candidate < earliest)
+                candidate += TimeSpan.FromTicks(((earliest - candidate).Ticks + burst.Period.Ticks - 1) / burst.Period.Ticks * burst.Period.Ticks);
+            if (candidate <= latest && (next is null || candidate < next)) next = candidate;
+        }
+        return next;
+    }
+    internal void ResetForPerformance() { Stop(); _elapsed = TimeSpan.Zero; _random = new Random(7); }
     public ThemeMode Mode { get; private set; }
 
     public AmbientScene(Canvas layer, FrameworkElement? greetingSpark = null)
@@ -108,7 +125,8 @@ internal sealed partial class AmbientScene
             var due = burst.StartDelay?.Ticks ?? burst.Period.Ticks * burst.Phase - _elapsed.Ticks % burst.Period.Ticks;
             if (due < 0) due += burst.Period.Ticks;
             var timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromTicks(Math.Max((long)due, TimeSpan.TicksPerMillisecond)) };
-            timer.Tick += (_, _) => { timer.Interval = burst.Period; Play(burst); };
+            _burstDue[burst] = DateTimeOffset.UtcNow + timer.Interval;
+            timer.Tick += (_, _) => { timer.Interval = burst.Period; _burstDue[burst] = DateTimeOffset.UtcNow + burst.Period; Play(burst); };
             timer.Start();
             _timers.Add(timer);
         }
@@ -116,6 +134,7 @@ internal sealed partial class AmbientScene
 
     public void Stop()
     {
+        StopEffects();
         if (!IsRunning) return;
         IsRunning = false;
         _elapsed += DateTime.UtcNow - _startedAt;
@@ -124,6 +143,7 @@ internal sealed partial class AmbientScene
 
     /// <summary>The DeepSeek whale's rise: at rest she is under the water (null in other themes).</summary>
     internal TranslateTransform? WhaleRise => _whaleRise;
+    internal void PreviewMomentStart() { if (IsRunning && _moment is { } moment) Play(moment); }
 
     /// <summary>For self-check captures: holds the theme's signature moment at <paramref name="at"/> into it until <see cref="Stop"/>.</summary>
     internal bool PreviewMoment(TimeSpan at)
@@ -144,6 +164,9 @@ internal sealed partial class AmbientScene
 
     private void Play(Burst burst)
     {
+        BurstStarted?.Invoke();
+        if (!IsRunning) return;
+        if (ReferenceEquals(burst, _moment)) MomentStarted?.Invoke(Mode);
         foreach (var (target, property, timeline) in burst.Parts)
         {
             var clock = timeline.CreateClock();
@@ -159,12 +182,14 @@ internal sealed partial class AmbientScene
     {
         foreach (var timer in _timers) timer.Stop();
         _timers.Clear();
+        _burstDue.Clear();
         foreach (var (target, property, clock) in _clocks.ToArray()) { clock.Controller?.Stop(); target.ApplyAnimationClock(property, null); }
         _clocks.Clear();
     }
 
     private void Clear()
     {
+        StopEffects();
         RemoveClocks();
         _motions.Clear();
         _bursts.Clear();

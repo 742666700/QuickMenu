@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Win32;
 using QuickMenu.Models;
 
@@ -25,16 +26,28 @@ public sealed class SettingsService
     public AppSettings Load()
     {
         AppSettings? settings;
+        var invalidMotion = false;
         try
         {
             if (!File.Exists(_path)) return new() { Version = AppSettings.CurrentVersion };
-            settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_path));
+            var text = File.ReadAllText(_path);
+            using var document = JsonDocument.Parse(text);
+            if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("CharacterMotion", out var motion)
+                && motion.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            {
+                var repaired = JsonNode.Parse(text)!;
+                repaired["CharacterMotion"] = true;
+                text = repaired.ToJsonString(); invalidMotion = true;
+            }
+            settings = JsonSerializer.Deserialize<AppSettings>(text);
         }
         catch (JsonException ex) { SetAside($"Settings could not be read ({ex.Message}); the defaults are used."); return Fallback(); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { App.Log(ex); return Fallback(); }
         if (settings == null) { SetAside("Settings were empty; the defaults are used."); return Fallback(); }
         Migrate(settings);
-        if (Repair(settings) is { Count: > 0 } reset) SetAside($"Settings had an invalid {string.Join(" and ", reset)}; only that was reset.");
+        var reset = Repair(settings);
+        if (invalidMotion) reset.Add("CharacterMotion");
+        if (reset.Count > 0) SetAside($"Settings had an invalid {string.Join(" and ", reset)}; only that was reset.");
         return settings;
     }
 

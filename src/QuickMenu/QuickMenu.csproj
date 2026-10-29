@@ -22,6 +22,7 @@
     <Resource Include="Assets/Fonts/QuickMenuSerifSC-SemiBold.ttf"/>
     <!-- Optional Claude娘 art; the theme works without it. -->
     <Resource Include="Assets/Characters/**/*.png"/>
+    <Resource Include="Assets/Characters/**/patches.json"/>
     <EmbeddedResource Include="Strings/*.json" LogicalName="Strings.%(Filename)%(Extension)"/>
     <Content Include="Assets/Fonts/OFL.txt"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory></Content>
   </ItemGroup>
