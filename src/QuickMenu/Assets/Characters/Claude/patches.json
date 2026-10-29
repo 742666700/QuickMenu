@@ -34,6 +34,11 @@
     "x": 288,
     "y": 68
   },
+  "front.late-1.png": {
+    "base": "front.png",
+    "x": 132,
+    "y": 64
+  },
   "front.tap-1.png": {
     "base": "front.png",
     "x": 132,
@@ -43,5 +48,10 @@
     "base": "front.png",
     "x": 132,
     "y": 64
+  },
+  "front.watch-1.png": {
+    "base": "front.png",
+    "x": 288,
+    "y": 68
   }
 }

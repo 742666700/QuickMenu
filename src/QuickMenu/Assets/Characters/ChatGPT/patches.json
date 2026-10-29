@@ -38,5 +38,10 @@
     "base": "front.png",
     "x": 224,
     "y": 0
+  },
+  "front.watch-1.png": {
+    "base": "front.png",
+    "x": 296,
+    "y": 168
   }
 }

@@ -170,6 +170,8 @@ internal sealed partial class CompanionWindow : Window
         if (_frames is null) { _frameTimer.Stop(); return; }
         _frame = (_frame + 1) % _frames.Count;
         SetPicture(_frames[_frame].Frame);
+        if (_character?.Id == "deepseek-rice" && _frame is 3 or 4 && _spontaneous && _random.NextDouble() < .25)
+            _glints.PlayCompanionEffect("rice", new Point(_figureWidth * _scale * .63, Pad + _figureHeight * _scale * .5), _glint.Color);
         _frameTimer.Interval = _frames[_frame].Hold;
     }
 

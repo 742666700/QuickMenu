@@ -3,5 +3,20 @@
     "base": "front.png",
     "x": 240,
     "y": 180
+  },
+  "front.yawn-2.png": {
+    "base": "front.png",
+    "x": 36,
+    "y": 172
+  },
+  "front.watch-1.png": {
+    "base": "front.png",
+    "x": 232,
+    "y": 172
+  },
+  "front.yawn-1.png": {
+    "base": "front.png",
+    "x": 36,
+    "y": 172
   }
 }

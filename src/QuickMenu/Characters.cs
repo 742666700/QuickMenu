@@ -84,10 +84,14 @@ internal static class Characters
             new("front.png", "front.blink-1.png", [new(0.86, 0.2), new(0.2, 0.06), new(0.04, 0.62)])
             {
                 Clips = [
-                    new(CompanionCue.Idle, [("front.read-1.png", .6), ("front.read-2.png", .35), ("front.read-3.png", .35), ("front.png", .5)], "glow"),
+                    new(CompanionCue.Idle, [("front.read-1.png", .6), ("front.read-2.png", .35), ("front.read-3.png", .35), ("front.png", .5)], "glow",
+                        Hours: [new(new(5, 0), new(23, 0), 1)]),
                     new(CompanionCue.Click, [("front.confident-1.png", 1.2), ("front.confident-2.png", .15)], "stars"),
                     new(CompanionCue.Hover, [("front.focus-1.png", .9)]),
                     new(CompanionCue.Doze, [("front.tap-1.png", .3), ("front.tap-2.png", .3), ("front.tap-1.png", .3), ("front.tap-2.png", .3), ("front.tap-1.png", .3), ("front.tap-2.png", .3), ("front.focus-1.png", .8)]),
+                    new(CompanionCue.Typing, [("front.focus-1.png", .5)], Loop: true),
+                    new(CompanionCue.Idle, [("front.late-1.png", .8), ("front.png", .4)], "tear", Hours: [new(new(23, 0), new(5, 0), 1)]),
+                    new(CompanionCue.Watch, [("front.watch-1.png", .9)])
                 ]
             },
             new("side.png", null, [new(0.84, 0.22), new(0.18, 0.06), new(0.04, 0.6)])),
@@ -100,6 +104,7 @@ internal static class Characters
                     new(CompanionCue.Hover, [("front.hover-1.png", 1)]),
                     new(CompanionCue.Doze, [("wait-1.png", .8)], "typing", Loop: true),
                     new(CompanionCue.Idle, [("front.wing-1.png", .25), ("front.wing-2.png", .25), ("front.wing-1.png", .25), ("front.wing-2.png", .25)]),
+                    new(CompanionCue.Watch, [("front.watch-1.png", .9)])
                 ]
             },
             new("side.png", null, [new(0.2, 0.18), new(0.6, 0.13), new(0.86, 0.72)])),
@@ -117,6 +122,7 @@ internal static class Characters
                     new(CompanionCue.Wake, [("front.wake-1.png", .5)], "surprise", Effects: [new("sweat", new(.65, .4))]),
                     new(CompanionCue.Hover, [("front.hover-1.png", 1)]),
                     new(CompanionCue.Click, [("offer-1.png", 1.4), ("offer.blink-1.png", .6)], "stars"),
+                    new(CompanionCue.Watch, [("front.watch-1.png", .9)])
                 ]
             },
             new("side.png", null, [new(0.08, 0.3), new(0.78, 0.08), new(0.92, 0.72)]),
@@ -137,8 +143,16 @@ internal static class Characters
                 ]
             }),
         Define("deepseek", "DeepSeek娘 · 优雅", "DeepSeek", ThemeMode.DeepSeek, 0.92, Bubble(),
-            new("front.png", "front.blink-1.png", [new(0.65, 0.6), new(0.61, 0.15), new(0.89, 0.65)]),
-            new("side.png", null, [new(0.1, 0.21), new(0.51, 0.18), new(0.9, 0.65)])),
+            new("front.png", "front.blink-1.png", [new(0.65, 0.6), new(0.61, 0.15), new(0.89, 0.65)])
+            {
+                Clips = [
+                    new(CompanionCue.Click, [("curtsey-1.png", 1.3)]),
+                    new(CompanionCue.Idle, [("front.yawn-1.png", .8), ("front.yawn-2.png", .4)], "tear"),
+                    new(CompanionCue.Watch, [("front.watch-1.png", .9)])
+                ]
+            },
+            new("side.png", null, [new(0.1, 0.21), new(0.51, 0.18), new(0.9, 0.65)])
+            { Clips = [new(CompanionCue.Idle, [("side.png", 1.4)], Effects: [new("glow", new(.2, .4))])] }),
         Define("gemini", "Gemini娘", "Gemini", ThemeMode.Gemini, 0.9, Star(),
             new("front.png", "front.blink-1.png", [new(0.85, 0.35), new(0.61, 0.095), new(0.36, 0.78)])
             {
@@ -148,6 +162,7 @@ internal static class Characters
                     new(CompanionCue.Hover, [("front.curious-1.png", .9)]),
                     new(CompanionCue.Idle, [("front.smirk-1.png", .5)], "stars", Weight: .15),
                     new(CompanionCue.Doze, [("front.wash-1.png", .4), ("front.wash-2.png", .4), ("front.wash-1.png", .4), ("front.wash-2.png", .4), ("front.wash-1.png", .4), ("front.wash-2.png", .4)]),
+                    new(CompanionCue.Watch, [("front.watch-1.png", .9)])
                 ]
             },
             new("side.png", null, [new(0.075, 0.145), new(0.63, 0.13), new(0.8, 0.65)])),
