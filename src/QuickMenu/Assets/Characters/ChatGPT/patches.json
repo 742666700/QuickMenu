@@ -3,5 +3,40 @@
     "base": "front.png",
     "x": 304,
     "y": 168
+  },
+  "front.sprite-1.png": {
+    "base": "front.png",
+    "x": 572,
+    "y": 228
+  },
+  "front.sprite-2.png": {
+    "base": "front.png",
+    "x": 572,
+    "y": 232
+  },
+  "front.praise-1.png": {
+    "base": "front.png",
+    "x": 256,
+    "y": 168
+  },
+  "front.wing-1.png": {
+    "base": "front.png",
+    "x": 0,
+    "y": 340
+  },
+  "front.wing-2.png": {
+    "base": "front.png",
+    "x": 0,
+    "y": 340
+  },
+  "front.praise-2.png": {
+    "base": "front.png",
+    "x": 256,
+    "y": 168
+  },
+  "front.hover-1.png": {
+    "base": "front.png",
+    "x": 224,
+    "y": 0
   }
 }

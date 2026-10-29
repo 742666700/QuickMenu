@@ -3,5 +3,55 @@
     "base": "front.png",
     "x": 280,
     "y": 160
+  },
+  "front.tail-1.png": {
+    "base": "front.png",
+    "x": 104,
+    "y": 720
+  },
+  "front.tail-2.png": {
+    "base": "front.png",
+    "x": 128,
+    "y": 720
+  },
+  "front.tail-3.png": {
+    "base": "front.png",
+    "x": 128,
+    "y": 720
+  },
+  "front.wink-1.png": {
+    "base": "front.png",
+    "x": 276,
+    "y": 136
+  },
+  "front.smirk-1.png": {
+    "base": "front.png",
+    "x": 276,
+    "y": 136
+  },
+  "front.curious-1.png": {
+    "base": "front.png",
+    "x": 180,
+    "y": 0
+  },
+  "front.wash-1.png": {
+    "base": "front.png",
+    "x": 196,
+    "y": 136
+  },
+  "front.ear-1.png": {
+    "base": "front.png",
+    "x": 180,
+    "y": 0
+  },
+  "front.ear-2.png": {
+    "base": "front.png",
+    "x": 184,
+    "y": 0
+  },
+  "front.wash-2.png": {
+    "base": "front.png",
+    "x": 196,
+    "y": 136
   }
 }

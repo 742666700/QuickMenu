@@ -92,7 +92,16 @@ internal static class Characters
             },
             new("side.png", null, [new(0.84, 0.22), new(0.18, 0.06), new(0.04, 0.6)])),
         Define("chatgpt", "ChatGPT娘", "ChatGPT", ThemeMode.ChatGpt, 1, Cross(),
-            new("front.png", "front.blink-1.png", [new(0.915, 0.225), new(0.61, 0.125), new(0.88, 0.72)]),
+            new("front.png", "front.blink-1.png", [new(0.915, 0.225), new(0.61, 0.125), new(0.88, 0.72)])
+            {
+                Clips = [
+                    new(CompanionCue.Idle, [("front.sprite-1.png", .3), ("front.sprite-2.png", .3)], Effects: [new("typing", new(.84, .16))]),
+                    new(CompanionCue.Click, [("front.praise-1.png", 1), ("front.praise-2.png", .5)], "stars", Effects: [new("surprise", new(.85, .16))]),
+                    new(CompanionCue.Hover, [("front.hover-1.png", 1)]),
+                    new(CompanionCue.Doze, [("wait-1.png", .8)], "typing", Loop: true),
+                    new(CompanionCue.Idle, [("front.wing-1.png", .25), ("front.wing-2.png", .25), ("front.wing-1.png", .25), ("front.wing-2.png", .25)]),
+                ]
+            },
             new("side.png", null, [new(0.2, 0.18), new(0.6, 0.13), new(0.86, 0.72)])),
         // The rice-bowl chibi is the default DeepSeek娘 (first of the deep-sea pair, so that theme brings her along):
         // one invocation she stands with her bowl (front or side), the next she sits and eats, scoop, big bite,
@@ -131,7 +140,16 @@ internal static class Characters
             new("front.png", "front.blink-1.png", [new(0.65, 0.6), new(0.61, 0.15), new(0.89, 0.65)]),
             new("side.png", null, [new(0.1, 0.21), new(0.51, 0.18), new(0.9, 0.65)])),
         Define("gemini", "Gemini娘", "Gemini", ThemeMode.Gemini, 0.9, Star(),
-            new("front.png", "front.blink-1.png", [new(0.85, 0.35), new(0.61, 0.095), new(0.36, 0.78)]),
+            new("front.png", "front.blink-1.png", [new(0.85, 0.35), new(0.61, 0.095), new(0.36, 0.78)])
+            {
+                Clips = [
+                    new(CompanionCue.Idle, [("front.ear-1.png", .12), ("front.ear-2.png", .12), ("front.tail-1.png", .34), ("front.tail-2.png", .34), ("front.tail-3.png", .34)]),
+                    new(CompanionCue.Click, [("front.wink-1.png", 1)], "stars"),
+                    new(CompanionCue.Hover, [("front.curious-1.png", .9)]),
+                    new(CompanionCue.Idle, [("front.smirk-1.png", .5)], "stars", Weight: .15),
+                    new(CompanionCue.Doze, [("front.wash-1.png", .4), ("front.wash-2.png", .4), ("front.wash-1.png", .4), ("front.wash-2.png", .4), ("front.wash-1.png", .4), ("front.wash-2.png", .4)]),
+                ]
+            },
             new("side.png", null, [new(0.075, 0.145), new(0.63, 0.13), new(0.8, 0.65)])),
     };
 
