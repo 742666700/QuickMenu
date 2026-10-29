@@ -90,12 +90,34 @@ internal static class Characters
         // one invocation she stands with her bowl (front or side), the next she sits and eats, scoop, big bite,
         // puffed cheeks, a happy swallow, and round again. The maid in a long dress follows as the elegant version.
         Define("deepseek-rice", "DeepSeek娘", "DeepSeekRice", ThemeMode.DeepSeek, 0.8, Bubble(),
-            new("front.png", "front.blink-1.png", [new(0.9, 0.5), new(0.74, 0.07), new(0.06, 0.78)]),
+            new("front.png", "front.blink-1.png", [new(0.9, 0.5), new(0.74, 0.07), new(0.06, 0.78)])
+            {
+                Rest = "front.doze-2.png",
+                Clips = [
+                    new(CompanionCue.Idle, [("front.yawn-1.png", .5), ("front.yawn-2.png", 1.2), ("front.yawn-3.png", .6)], "tear"),
+                    new(CompanionCue.Doze, [("front.doze-1.png", .9), ("front.doze-2.png", 1.1)], "zzz", Loop: true,
+                        Effects: [new("bubble", new(.42, .46)), new("drool", new(.48, .48))]),
+                    new(CompanionCue.Wake, [("front.wake-1.png", .5)], "surprise", Effects: [new("sweat", new(.65, .4))]),
+                    new(CompanionCue.Hover, [("front.hover-1.png", 1)]),
+                    new(CompanionCue.Click, [("offer-1.png", 1.4), ("offer.blink-1.png", .6)], "stars"),
+                ]
+            },
             new("side.png", null, [new(0.08, 0.3), new(0.78, 0.08), new(0.92, 0.72)]),
             new("eat-1.png", null, [new(0.08, 0.3), new(0.74, 0.05), new(0.95, 0.6)])
             {
                 Group = 1, Scale = 0.85,
+                Hours = [new(new(11, 30), new(13, 0), 3), new(new(17, 30), new(19, 30), 3)],
                 Frames = [("eat-1.png", 1.6), ("eat-2.png", 0.7), ("eat-3.png", 0.9), ("eat-4.png", 1.4), ("eat-5.png", 1.5), ("eat-6.png", 0.9)]
+            },
+            new("eat-1.png", null, [new(.08, .3), new(.74, .05), new(.95, .6)])
+            {
+                Id = "nap", Group = 2, Scale = .85, MotionOnly = true, AutoCue = CompanionCue.Doze, Rest = "eat-1.doze-3.png",
+                Hours = [new(new(13, 0), new(14, 30), 3), new(new(22, 30), new(6, 30), 3)],
+                Clips = [
+                    new(CompanionCue.Doze, [("eat-1.doze-1.png", 1.1), ("eat-1.doze-2.png", 1.2), ("eat-1.doze-3.png", 1), ("eat-1.doze-4.png", .5)], "zzz", Loop: true,
+                        Effects: [new("bubble", new(.44, .48))]),
+                    new(CompanionCue.Wake, [("eat-1.doze-4.png", .5)], "surprise", Effects: [new("sweat", new(.65, .44))])
+                ]
             }),
         Define("deepseek", "DeepSeek娘 · 优雅", "DeepSeek", ThemeMode.DeepSeek, 0.92, Bubble(),
             new("front.png", "front.blink-1.png", [new(0.65, 0.6), new(0.61, 0.15), new(0.89, 0.65)]),

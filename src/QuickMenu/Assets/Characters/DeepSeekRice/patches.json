@@ -3,5 +3,65 @@
     "base": "front.png",
     "x": 216,
     "y": 364
+  },
+  "front.yawn-1.png": {
+    "base": "front.png",
+    "x": 212,
+    "y": 356
+  },
+  "front.yawn-2.png": {
+    "base": "front.png",
+    "x": 212,
+    "y": 356
+  },
+  "front.yawn-3.png": {
+    "base": "front.png",
+    "x": 212,
+    "y": 356
+  },
+  "front.doze-1.png": {
+    "base": "front.png",
+    "x": 212,
+    "y": 356
+  },
+  "front.wake-1.png": {
+    "base": "front.png",
+    "x": 212,
+    "y": 356
+  },
+  "eat-1.doze-1.png": {
+    "base": "eat-1.png",
+    "x": 280,
+    "y": 380
+  },
+  "eat-1.doze-2.png": {
+    "base": "eat-1.png",
+    "x": 280,
+    "y": 380
+  },
+  "eat-1.doze-3.png": {
+    "base": "eat-1.png",
+    "x": 280,
+    "y": 380
+  },
+  "eat-1.doze-4.png": {
+    "base": "eat-1.png",
+    "x": 280,
+    "y": 380
+  },
+  "offer.blink-1.png": {
+    "base": "offer-1.png",
+    "x": 212,
+    "y": 356
+  },
+  "front.doze-2.png": {
+    "base": "front.png",
+    "x": 212,
+    "y": 356
+  },
+  "front.hover-1.png": {
+    "base": "front.png",
+    "x": 212,
+    "y": 356
   }
 }
