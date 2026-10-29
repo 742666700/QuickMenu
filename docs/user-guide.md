@@ -59,7 +59,7 @@ XInput controllers are supported (Xbox controllers and most Windows handhelds). 
 The gear at the top right opens settings; the list on the left jumps to each part. Every change applies and saves at once.
 
 - **General**: the free-software notice, language (same as Windows / 简体中文 / English), the hotkey (must include Ctrl or Alt; if another program holds it, the old one is kept), the time in the greeting (name the local time and add a second time zone), whether clicking outside hides the menu (it does by default; turned off, the menu steps behind the window you clicked and the hotkey or tray icon brings it back with your search and page kept), start when you sign in, controller.
-- **Theme**: OLED Day, OLED Night, Cream Daisy, Pearl, Deep Sea, Starry Violet or same as Windows, and a character (goes with any theme; optionally switches with the theme). Theme motion stops when Windows animations are off.
+- **Theme**: OLED Day, OLED Night, Cream Daisy, Pearl, Deep Sea, Starry Violet or same as Windows, and a character (goes with any theme; optionally switches with the theme). **Character idle actions** is on by default. Turning it off stops spontaneous actions, dozing and theme reactions; hover and click responses remain. Turning Windows animations off stops all character and theme motion.
 - **Games**:
   - Reads games installed through Steam (every library), Epic, GOG, Ubisoft Connect and the Xbox app / Microsoft Store, plus EA, Battle.net, HoYoverse, WeGame and others whose game is registered with Windows; each store can be turned off.
   - Add game folder: scans for games made with Unity, Unreal, Godot, GameMaker, RPG Maker, Ren'Py, KiriKiri and more.
@@ -88,6 +88,10 @@ To uninstall: turn off start-on-sign-in, exit from the tray, delete the program 
 The program isn't code-signed, so Windows may warn about an unknown publisher on first run.
 
 ## Characters
+
+Each character has her own pace: rice-bowl DeepSeek reacts a little late, eats and dozes; Claude reads and nods decisively; ChatGPT responds gently; Gemini twitches her ears and swishes her tail. Rice-bowl DeepSeek is more likely to eat at meal times and appear asleep during lunchtime or late at night, using your computer's local time. Front-facing Claude keeps a focused gaze while the search box contains text.
+
+After two minutes without keyboard, mouse or controller input, character clips, loops and theme motion stop. Applicable poses keep blinking, while sleeping DeepSeek stays asleep. Input resumes motion; hiding the menu stops all motion immediately. The character window never takes keyboard focus from the menu.
 
 The characters and their themes are fan art, not affiliated with Anthropic, OpenAI, DeepSeek or Google; their names and trademarks belong to their owners.
 

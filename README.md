@@ -20,6 +20,10 @@
 
 ![AI娘快捷菜单（奶油雏菊主题与 Claude娘）](docs/images/menu-claude.jpg)
 
+角色有各自的小动作和互动节奏，还会在长时间无操作时打瞌睡或等你继续；外观设置中可以关闭自发动作。
+
+![DeepSeek娘吃着吃着打瞌睡（2.1.0 本地候选构建预览）](docs/images/deepseek-doze.gif)
+
 | | |
 | --- | --- |
 | ![OLED 黑夜主题](docs/images/menu-oled.png) | ![深海蓝白主题与 DeepSeek娘](docs/images/menu-deepseek.jpg) |
