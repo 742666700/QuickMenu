@@ -3,5 +3,45 @@
     "base": "front.png",
     "x": 296,
     "y": 84
+  },
+  "front.read-1.png": {
+    "base": "front.png",
+    "x": 132,
+    "y": 64
+  },
+  "front.read-2.png": {
+    "base": "front.png",
+    "x": 132,
+    "y": 64
+  },
+  "front.read-3.png": {
+    "base": "front.png",
+    "x": 132,
+    "y": 64
+  },
+  "front.confident-1.png": {
+    "base": "front.png",
+    "x": 288,
+    "y": 68
+  },
+  "front.confident-2.png": {
+    "base": "front.png",
+    "x": 288,
+    "y": 68
+  },
+  "front.focus-1.png": {
+    "base": "front.png",
+    "x": 288,
+    "y": 68
+  },
+  "front.tap-1.png": {
+    "base": "front.png",
+    "x": 132,
+    "y": 64
+  },
+  "front.tap-2.png": {
+    "base": "front.png",
+    "x": 132,
+    "y": 64
   }
 }

@@ -81,7 +81,15 @@ internal static class Characters
     public static IReadOnlyList<Character> All { get; } = new[]
     {
         Define("claude", "Claude娘", "Claude", ThemeMode.Cream, 1, null,
-            new("front.png", "front.blink-1.png", [new(0.86, 0.2), new(0.2, 0.06), new(0.04, 0.62)]),
+            new("front.png", "front.blink-1.png", [new(0.86, 0.2), new(0.2, 0.06), new(0.04, 0.62)])
+            {
+                Clips = [
+                    new(CompanionCue.Idle, [("front.read-1.png", .6), ("front.read-2.png", .35), ("front.read-3.png", .35), ("front.png", .5)], "glow"),
+                    new(CompanionCue.Click, [("front.confident-1.png", 1.2), ("front.confident-2.png", .15)], "stars"),
+                    new(CompanionCue.Hover, [("front.focus-1.png", .9)]),
+                    new(CompanionCue.Doze, [("front.tap-1.png", .3), ("front.tap-2.png", .3), ("front.tap-1.png", .3), ("front.tap-2.png", .3), ("front.tap-1.png", .3), ("front.tap-2.png", .3), ("front.focus-1.png", .8)]),
+                ]
+            },
             new("side.png", null, [new(0.84, 0.22), new(0.18, 0.06), new(0.04, 0.6)])),
         Define("chatgpt", "ChatGPT娘", "ChatGPT", ThemeMode.ChatGpt, 1, Cross(),
             new("front.png", "front.blink-1.png", [new(0.915, 0.225), new(0.61, 0.125), new(0.88, 0.72)]),
