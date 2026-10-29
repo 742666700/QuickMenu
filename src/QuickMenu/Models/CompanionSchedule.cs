@@ -17,7 +17,7 @@ public sealed class CompanionSchedule(Func<DateTimeOffset> clock, Func<double> r
     Func<DateTimeOffset, DateTimeOffset, DateTimeOffset?>? alignIdle = null, bool diagnostic = false)
 {
     private DateTimeOffset _activity, _idleDue, _hoverDue, _automaticDue;
-    private bool _dozed;
+    private bool _dozed, _waited;
     public CompanionState State { get; private set; } = CompanionState.Stopped;
     public bool Spontaneous { get; private set; } = true;
     public DateTimeOffset NextIdleAt => _idleDue;
@@ -25,7 +25,7 @@ public sealed class CompanionSchedule(Func<DateTimeOffset> clock, Func<double> r
 
     public void Start(bool spontaneous)
     {
-        State = CompanionState.Resting; _dozed = false;
+        State = CompanionState.Resting; _dozed = false; _waited = false;
         _activity = clock(); _hoverDue = DateTimeOffset.MinValue;
         _automaticDue = DateTimeOffset.MinValue;
         Spontaneous = spontaneous; NextIdle();
@@ -40,7 +40,7 @@ public sealed class CompanionSchedule(Func<DateTimeOffset> clock, Func<double> r
     public CompanionCue? NoteActivity()
     {
         if (State == CompanionState.Stopped) return null;
-        var wake = _dozed; _dozed = false;
+        var wake = _dozed; _dozed = false; _waited = false;
         _activity = clock();
         if (State is CompanionState.Quiescent or CompanionState.Dozing or CompanionState.Waiting) { State = CompanionState.Resting; NextIdle(); }
         return wake ? CompanionCue.Wake : null;
@@ -51,8 +51,8 @@ public sealed class CompanionSchedule(Func<DateTimeOffset> clock, Func<double> r
         var now = clock();
         if (now - _activity >= QuietAfter) { State = CompanionState.Quiescent; return null; }
         if (!Spontaneous || State is CompanionState.Playing or CompanionState.Dozing or CompanionState.Waiting) return null;
-        if (canDoze && now - _activity >= TimeSpan.FromSeconds(temperament.DozeSeconds))
-        { State = temperament.Sleeps ? CompanionState.Dozing : CompanionState.Waiting; _dozed = temperament.Sleeps; return CompanionCue.Doze; }
+        if (canDoze && !_waited && now - _activity >= TimeSpan.FromSeconds(temperament.DozeSeconds))
+        { State = temperament.Sleeps ? CompanionState.Dozing : CompanionState.Waiting; _dozed = temperament.Sleeps; _waited = true; return CompanionCue.Doze; }
         if (canIdle && now >= _idleDue && now >= _automaticDue) { State = CompanionState.Playing; NextIdle(); return CompanionCue.Idle; }
         return null;
     }
@@ -74,13 +74,14 @@ public sealed class CompanionSchedule(Func<DateTimeOffset> clock, Func<double> r
     }
     public void Finish()
     {
-        if (State == CompanionState.Playing) { State = CompanionState.Resting; NextIdle(); }
+        if (State is CompanionState.Playing or CompanionState.Waiting) { State = CompanionState.Resting; NextIdle(); }
     }
     public void BeginClip(CompanionCue cue)
     {
         if (State == CompanionState.Stopped) return;
         State = cue == CompanionCue.Doze ? (temperament.Sleeps ? CompanionState.Dozing : CompanionState.Waiting) : CompanionState.Playing;
         _dozed = cue == CompanionCue.Doze && temperament.Sleeps;
+        if (cue == CompanionCue.Doze) _waited = true;
         if (cue is CompanionCue.Idle or CompanionCue.Watch) _automaticDue = clock().AddSeconds(8);
     }
     private void NextIdle()

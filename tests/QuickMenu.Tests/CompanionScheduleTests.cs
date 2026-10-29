@@ -32,6 +32,22 @@ public class CompanionScheduleTests
     }
 
     [Fact]
+    public void FinishedNonSleepingGestureResumesIdleWithoutRepeatingTheWaitCue()
+    {
+        var schedule = new CompanionSchedule(() => _now, () => 0, Tempo with { Sleeps = false });
+        schedule.Start(true); _now += TimeSpan.FromSeconds(25);
+        Assert.Equal(CompanionCue.Doze, schedule.Tick(true, false));
+        schedule.BeginClip(CompanionCue.Doze);
+        _now += TimeSpan.FromSeconds(3); schedule.Finish();
+        Assert.Equal(CompanionState.Resting, schedule.State);
+        _now += TimeSpan.FromSeconds(12);
+        Assert.Equal(CompanionCue.Idle, schedule.Tick(true, true));
+        schedule.Finish(); schedule.NoteActivity();
+        _now += TimeSpan.FromSeconds(25);
+        Assert.Equal(CompanionCue.Doze, schedule.Tick(true, false));
+    }
+
+    [Fact]
     public void WaitingCharacterStopsOnInputWithoutInventingAWake()
     {
         var schedule = new CompanionSchedule(() => _now, () => 0, Tempo with { Sleeps = false });
